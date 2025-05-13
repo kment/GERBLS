@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 import numpy as np
 
 setup(name = "GERBLS",
-      ext_modules = cythonize([Extension("gerbls", 
+      ext_modules = cythonize([Extension("GERBLS", 
                                          ["GERBLS/gerbls.pyx",
                                           "GERBLS/source/ffafunc.cpp",
                                           "GERBLS/source/model.cpp",

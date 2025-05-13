@@ -16,8 +16,6 @@ srand(ctime(NULL))
 cdef class pyDataContainer:
     cdef DataContainer* cPtr
     cdef bool_t alloc           # Whether responsible for cPtr memory allocation
-    cdef readonly object gp_model
-    cdef readonly dict gp_soln
     
     def __cinit__(self):
         self.alloc = False
