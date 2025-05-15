@@ -1,27 +1,29 @@
 import gerbls
 import numpy as np
-from .exofunc import divide_into_chunks
 from scipy.signal import savgol_filter
 
 def clean_savgol(phot: gerbls.pyDataContainer,
                  N_flares: int = 3,
-                 verbose: bool = False):
+                 sigma_clip: float = 5.,
+                 window_length: float = 1.):
     """
     Clean the data using a Savitsky-Golay filter.
     Also performs flare rejection.
 
     Parameters
     ----------
-    phot : cinject.pyDataContainer
+    phot : gerbls.pyDataContainer
         Input data to be cleaned.
     N_flares : int, optional
         Number of iterations to detect flares, by default 3
-    verbose: bool, optional
-        Whether to print output (warnings), by default False
+    sigma_clip: float, optional
+        Whether to remove outliers more than X sigma from the initial baseline, by default 5. To turn off, enter 0.
+    window_length: float, optional
+        Window length in time units (days) for the Savitsky-Golay filter, by default 1.
 
     Returns
     -------
-    cinject.pyDataContainer
+    gerbls.pyDataContainer
         Cleaned data.
     np.array
         Mask corresponding to valid cleaned data.
@@ -31,7 +33,7 @@ def clean_savgol(phot: gerbls.pyDataContainer,
     cmask = np.ones(phot.size, dtype=bool)
 
     # Determine window size (=1 day) based on median time cadence
-    filter_width = int(1 / np.median(np.diff(phot.rjd)))
+    filter_width = int(window_length / np.median(np.diff(phot.rjd)))
     if filter_width % 2 == 0:
         filter_width += 1
 
@@ -42,25 +44,18 @@ def clean_savgol(phot: gerbls.pyDataContainer,
         mag_fit = np.zeros(phot.size)
 
         # Use cubic splines to interpolate over unmasked data
-        #spl = CubicSpline(phot.rjd[mask], phot.mag[mask])
-        #mag_data[~mask] = spl(phot.rjd[~mask])
         mag_data[~mask] = np.interp(phot.rjd[~mask], phot.rjd[mask], phot.mag[mask])
 
-        # Divide data into chunks with gaps over 0.2 days
-        for a, b in divide_into_chunks(phot.rjd, 0.2):
-            if b - a < filter_width:
-                filter_width_ = b - a - (1 if (b - a) % 2 == 0 else 2)
-                if verbose:
-                    print(f"Warning: Savgol window length shortened {filter_width} => {filter_width_}")
-            else:
-                filter_width_ = filter_width
-            mag_fit[a:b] = savgol_filter(mag_data[a:b], filter_width_, 3)
+        mag_fit = savgol_filter(mag_data, filter_width, 3)
         
         return mag_fit[mask]
+    
+    if sigma_clip > 0:
+        mag0 = fit(cmask)
+        cmask = (abs(phot.mag - mag0) <= phot.err * sigma_clip)
 
     for _ in range(N_flares):
         phot_ = phot.mask(cmask)
-        #cmask[cmask] = ~phot_.find_flares(fit(cmask))
         cmask[cmask] = ~find_flares(phot_, fit(cmask))
 
     cphot = phot.mask(cmask)
