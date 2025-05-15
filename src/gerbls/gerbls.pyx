@@ -1,7 +1,7 @@
 # cython: language_level = 3str
 # distutils: language = c++
 
-from cgerbls cimport *
+from gerbls.cgerbls cimport *
 from libc.stdlib cimport srand
 from libc.time cimport time as ctime
 from libcpp cimport bool as bool_t

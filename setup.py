@@ -2,13 +2,13 @@ from setuptools import Extension, setup
 from Cython.Build import cythonize
 import numpy as np
 
-setup(name = "GERBLS",
-      ext_modules = cythonize([Extension("GERBLS",
-                                         ["src/GERBLS/gerbls.pyx",
-                                          "src/GERBLS/cpp/ffafunc.cpp",
-                                          "src/GERBLS/cpp/model.cpp",
-                                          "src/GERBLS/cpp/physfunc.cpp",
-                                          "src/GERBLS/cpp/structure.cpp"],
+setup(name = "_gerbls",
+      ext_modules = cythonize([Extension("_gerbls",
+                                         ["src/gerbls/gerbls.pyx",
+                                          "src/gerbls/cpp/ffafunc.cpp",
+                                          "src/gerbls/cpp/model.cpp",
+                                          "src/gerbls/cpp/physfunc.cpp",
+                                          "src/gerbls/cpp/structure.cpp"],
                                          include_dirs=[np.get_include()],
                                          define_macros=[("NPY_NO_DEPRECATED_API", 
                                                          "NPY_1_7_API_VERSION")],

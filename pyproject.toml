@@ -3,7 +3,7 @@ requires = ["setuptools >= 61", "Cython >= 3.1", "numpy >= 1.19"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "GERBLS"
+name = "gerbls"
 version = "0.6.0.dev3"
 authors = [{name = "Kristo Ment", email = "kristo.ment@gmail.com"}]
 license = "MIT"
