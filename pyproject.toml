@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools >= 61", "Cython >= 3.1", "numpy"]
+requires = ["setuptools >= 61", "Cython >= 3.1", "numpy >= 1.19"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "GERBLS"
-version = "0.6.0.dev2"
+version = "0.6.0.dev3"
 authors = [{name = "Kristo Ment", email = "kristo.ment@gmail.com"}]
 license = "MIT"
 license-files = ["LICENSE"]
@@ -22,7 +22,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "numpy",
+    "numpy >= 1.19",
 ]
 
 [project.urls]

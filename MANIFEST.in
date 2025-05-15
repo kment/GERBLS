@@ -1,2 +1,2 @@
 global-include *.pyx *.pxd *.pxi
-graft GERBLS/source/riptide
+graft src/GERBLS/source/riptide
