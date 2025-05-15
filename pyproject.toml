@@ -13,6 +13,7 @@ requires-python = ">= 3.8"
 
 classifiers = [
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -21,9 +22,10 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Astronomy",
 ]
 
-dependencies = [
-    "numpy >= 1.19",
-]
+dependencies = ["numpy >= 1.19"]
+
+[project.optional-dependencies]
+extras = ["matplotlib", "scipy"]
 
 [project.urls]
 Repository = "https://github.com/kment/GERBLS.git"

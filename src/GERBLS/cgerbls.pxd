@@ -7,10 +7,10 @@ from libcpp.string cimport string
 #from libcpp.unordered_map cimport unordered_map
 from libcpp.vector cimport vector
 
-cdef extern from "source/ffafunc.hpp":
+cdef extern from "cpp/ffafunc.hpp":
     unique_ptr[DataContainer] resample_uniform(DataContainer, double)
 
-cdef extern from "source/model.hpp":
+cdef extern from "cpp/model.hpp":
     cdef cppclass BLSModel:
         vector[double] chi2_dmag
         vector[double] chi2_dt
@@ -36,7 +36,7 @@ cdef extern from "source/model.hpp":
         
         void run_double(bool_t)
 
-cdef extern from "source/physfunc.hpp":
+cdef extern from "cpp/physfunc.hpp":
     double gdraw(double, double, double)
     double get_aR_ratio(double, double, double)
     double get_inc(double, double, double, double)
@@ -44,7 +44,7 @@ cdef extern from "source/physfunc.hpp":
     double get_transit_dur(double, double, double, double)
     double grand(double, double)
 
-cdef extern from "source/structure.hpp":
+cdef extern from "cpp/structure.hpp":
     cdef cppclass DataContainer:
         int* sec
         double* rjd
