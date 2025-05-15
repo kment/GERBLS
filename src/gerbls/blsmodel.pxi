@@ -52,12 +52,18 @@ cdef class pyFastBLS(pyBLSModel):
         if self.alloc:
             del self.dPtr
     
-    def create(self, pyDataContainer data, double min_period, double max_period, double t_samp = 0., double M_star = 1., double R_star = 1.):
+    def create(self, pyDataContainer data, double min_period, double max_period, double t_samp = 0., 
+               double M_star = 1., double R_star = 1., bool_t verbose = True):
         cdef Target* target = new Target()
         target.M = M_star
         target.R = R_star
         self.dPtr = new BLSModel_FFA(data.cPtr[0], 1./max_period, 1./min_period, target)
-        self.dPtr.t_samp = t_samp
+        if t_samp > 0:
+            self.t_samp = t_samp
+        else:
+            self.t_samp = np.median(np.diff(data.rjd))
+            if verbose:
+                print(f"BLS time sampling set to the median cadence of input data: {self.t_samp*24*60:.2f} minutes.", flush=True)
         self.cPtr = self.dPtr
         self.alloc = True
     
@@ -196,8 +202,13 @@ cdef class pyBLSResult:
         self.dur = blsa.dur[index]
     
     def __str__(self):
-        return f"pyBLSResult(P={self.P}, dchi2={self.dchi2}, mag0={self.mag0}, dmag={self.dmag}, t0={self.t0}, dur={self.dur})"
+        return f"pyBLSResult(P={self.P}, dchi2={self.dchi2}, mag0={self.mag0}, dmag={self.dmag}, " +\
+               f"t0={self.t0}, dur={self.dur}, snr={self.snr})"
     
     @property
     def r(self):
         return (self.dmag / self.mag0)**0.5
+
+    @property
+    def snr(self):
+        return ((-self.dchi2)**0.5 if self.dchi2 < 0 else -np.inf)

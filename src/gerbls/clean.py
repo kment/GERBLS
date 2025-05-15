@@ -1,14 +1,18 @@
 import gerbls
 import numpy as np
+from .exofunc import divide_into_chunks
 from scipy.signal import savgol_filter
 
 def clean_savgol(phot: gerbls.pyDataContainer,
                  N_flares: int = 3,
                  sigma_clip: float = 5.,
-                 window_length: float = 1.):
+                 window_length: float = 1.,
+                 chunk_length: float = 0.,
+                 verbose: bool = True):
     """
     Clean the data using a Savitsky-Golay filter.
-    Also performs flare rejection.
+    Also performs sigma clipping and flare rejection.
+    Cubic splines will be used to interpolate over any masked data.
 
     Parameters
     ----------
@@ -20,6 +24,11 @@ def clean_savgol(phot: gerbls.pyDataContainer,
         Whether to remove outliers more than X sigma from the initial baseline, by default 5. To turn off, enter 0.
     window_length: float, optional
         Window length in time units (days) for the Savitsky-Golay filter, by default 1.
+    chunk_length: float, optional
+        If given, divide the data into chunks first where the time gaps in data are longer than this length,
+        and apply the filter independently to each chunk, by default 0.
+    verbose: bool, optional
+        Whether to print any text/warnings, by default True
 
     Returns
     -------
@@ -46,7 +55,15 @@ def clean_savgol(phot: gerbls.pyDataContainer,
         # Use cubic splines to interpolate over unmasked data
         mag_data[~mask] = np.interp(phot.rjd[~mask], phot.rjd[mask], phot.mag[mask])
 
-        mag_fit = savgol_filter(mag_data, filter_width, 3)
+        # Divide data into chunks with gaps over 0.2 days
+        for a, b in divide_into_chunks(phot.rjd, chunk_length):
+            if b - a < filter_width:
+                filter_width_ = b - a - (1 if (b - a) % 2 == 0 else 2)
+                if verbose:
+                    print(f"Warning: Savgol window length shortened {filter_width} => {filter_width_}")
+            else:
+                filter_width_ = filter_width
+            mag_fit[a:b] = savgol_filter(mag_data[a:b], filter_width_, 3)
         
         return mag_fit[mask]
     
