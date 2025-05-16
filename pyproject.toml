@@ -1,5 +1,9 @@
 [build-system]
-requires = ["setuptools >= 61", "Cython >= 3.1", "numpy >= 1.19"]
+requires = [
+  "setuptools >= 61",
+  "Cython >= 3.1",
+  "numpy >= 1.19",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,7 +29,13 @@ classifiers = [
 dependencies = ["numpy >= 1.19"]
 
 [project.optional-dependencies]
-extras = ["matplotlib", "scipy"]
+extras = [
+  "matplotlib", 
+  "scipy",
+]
 
 [project.urls]
 Repository = "https://github.com/kment/GERBLS.git"
+
+[tool.setuptools.dynamic]
+version = {attr = "gerbls.__version__"}
