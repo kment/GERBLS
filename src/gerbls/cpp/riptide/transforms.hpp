@@ -1,3 +1,9 @@
+/*
+    This code originates from the riptide package - see LICENSE.
+    Copyright (c) 2017-2021 Vincent Morello
+    Minor modifications by Kristo Ment (5/16/25).
+*/
+
 #ifndef TRANSFORMS_HPP
 #define TRANSFORMS_HPP
 

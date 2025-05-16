@@ -1,3 +1,8 @@
+/*
+    This code originates from the riptide package - see LICENSE.
+    Copyright (c) 2017-2021 Vincent Morello
+*/
+
 #ifndef RUNNING_MEDIAN_HPP
 #define RUNNING_MEDIAN_HPP
 

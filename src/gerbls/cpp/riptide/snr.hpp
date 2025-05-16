@@ -1,3 +1,8 @@
+/*
+    This code originates from the riptide package - see LICENSE.
+    Copyright (c) 2017-2021 Vincent Morello
+*/
+
 #ifndef SNR_HPP
 #define SNR_HPP
 

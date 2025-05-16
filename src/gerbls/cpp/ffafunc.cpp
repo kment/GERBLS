@@ -1,3 +1,10 @@
+/*
+    This code uses portions of the riptide package, with modifications - see riptide/LICENSE.
+    The original riptide code is included in riptide/periodogram.hpp.
+    Portions under Copyright (c) 2017-2021 Vincent Morello
+    Portions under Copyright (c) 2025 Kristo Ment
+*/
+
 #include "ffafunc.hpp"
 #include "physfunc.hpp"
 #include "riptide/block.hpp"
