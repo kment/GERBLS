@@ -138,7 +138,9 @@ std::unique_ptr<bool[]> DataContainer::find_flares(const double* mag0) {
 }
 std::unique_ptr<bool []> DataContainer::find_flares() {
 
-    double mag0 [size] {1};
+    double mag0 [size];
+    for (size_t i = 0; i < size; i++)
+        mag0[i] = 1;
     return find_flares(mag0);
     
 }

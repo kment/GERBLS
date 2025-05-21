@@ -93,7 +93,7 @@ void BLSModel_FFA::run_prec(bool verbose) {
 		std::cout << "Starting FFA...\n";
 
 	// Resample to desired tsamp
-	rdata = std::move(resample_uniform(*data, t_samp));
+	rdata = resample_uniform(*data, t_samp);
 	std::vector<T> mag(rdata->size, 0);	// Magnitudes
 	std::vector<T> wts(rdata->size, 0);	// Weights (1/err^2)
 	for (size_t i = 0; i < rdata->size; i++) {
