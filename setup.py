@@ -21,6 +21,7 @@ setup(name = "_gerbls",
                                                                "-fno-rounding-math",
                                                                "-fno-signed-zeros",
                                                                "-fno-trapping-math"])], 
-                              annotate=False),
+                              annotate=False,
+                              compiler_directives={"embedsignature": True}),
       zip_safe = False,
       )

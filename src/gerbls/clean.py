@@ -2,6 +2,7 @@ import gerbls
 import numpy as np
 from .exofunc import divide_into_chunks
 from scipy.signal import savgol_filter
+from typing import Union
 
 def clean_savgol(phot: gerbls.pyDataContainer,
                  N_flares: int = 3,
@@ -81,7 +82,7 @@ def clean_savgol(phot: gerbls.pyDataContainer,
     return cphot, cmask
 
 def find_flares(phot: gerbls.pyDataContainer, 
-                mag0: np.ndarray | float = 1):
+                mag0: Union[np.ndarray, float] = 1):
     """
     Returns a mask with detected flares.
     A flare is at least 4 consecutive positive 2-sigma deviants.
