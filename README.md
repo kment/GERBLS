@@ -17,6 +17,44 @@ If you encounter any issues while installing or using GERBLS, or would like to r
 
 ## Basic usage
 
+A detrended light curve is required to run the BLS. You may use any of your favorite detrending algorithms; `scipy.signal.savgol_filter` is a relatively good option for long-term variability. A convenience function has been implemented for easy generation of the BLS spectrum, with the following parameters:
+```
+def run_bls(time: npt.ArrayLike, 
+            mag: npt.ArrayLike, 
+            err: npt.ArrayLike,
+            min_period: float,
+            max_period: float,
+            t_samp: float = 0.):
+    """
+    A basic convenience function to generate a BLS spectrum.
+    The data must be evenly sampled in time to run the BLS,
+    use t_samp to specify the cadence for any resampling.
+
+    Parameters
+    ----------
+    time : npt.ArrayLike
+        Array of observation timestamps.
+    mag : npt.ArrayLike
+        Array of observed fluxes.
+    err : npt.ArrayLike
+        Array of flux uncertainties for each observation.
+    min_period : float
+        Minimum BLS period to search.
+    max_period : float
+        Maximum BLS period to search.
+    t_samp : float, optional
+        Time sampling to bin the data before running the BLS.
+        If 0 (default), the median time difference between observations is used.
+
+    Returns
+    -------
+    np.ndarray
+        Array of tested periods.
+    np.ndarray
+        BLS statistic for each tested period.
+    """
+```
+
 ## Documentation
 
 A full "Read The Docs" documentation page is currently in the works.
