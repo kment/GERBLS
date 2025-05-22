@@ -51,9 +51,17 @@ def run_bls(time: npt.ArrayLike,
     np.ndarray
         Array of tested periods.
     np.ndarray
-        BLS statistic for each tested period.
+        BLS statistic (Delta chi-squared) for each tested period.
     """
 ```
+
+For example, running the following Python script generates a BLS spectrum for orbital periods between 0.4 and 10 days, where the light curve has been stored in arrays `time`, `mag`, and `err`:
+```
+from gerbls import run_bls
+P, dchi2 = run_bls(time, mag, err, 0.4, 10)
+```
+
+The function `gerbls.run_bls` returns two arrays: a list of tested orbital periods `P` (in days) and a list of BLS statistics `dchi2` for each tested period. The searched periods are evenly spaced in frequency, and the spacing is set by the time sampling of the data. The BLS statistic `dchi2` ($\Delta\chi^2$) is the difference between the total $\chi^2$ parameters of a box-shaped model and a constant flux model fit to the data. In the case of pure Gaussian white noise, the signal-to-noise ratio of the fitted transit can be estimated as $\sqrt{\Delta\chi^2}$.
 
 ## Documentation
 
