@@ -31,10 +31,14 @@ def run_bls(time: npt.ArrayLike,
 
     Returns
     -------
-    np.ndarray
-        Array of tested periods.
-    np.ndarray
-        BLS statistic for each tested period.
+    dict
+        Dictionary with BLS results:
+        `P` is the list of tested periods
+        `dchi2` is the BLS statistic (Delta chi squared) at each period
+        `t0` is the best-fit transit mid-point at each period
+        `dur` is the best-fit duration at each period
+        `mag0` is the best-fit flux baseline at each period
+        `dmag` is the best-fit transit depth at each period
     """
 
     # Make sure the data is time-sorted and formatted as Numpy arrays
@@ -59,4 +63,9 @@ def run_bls(time: npt.ArrayLike,
 
     # Return the BLS spectrum
     blsa = gerbls.pyBLSAnalyzer(bls)
-    return blsa.P, -blsa.dchi2
+    return {'P': blsa.P,
+            'dchi2': -blsa.dchi2,
+            't0': blsa.t0,
+            'dur': blsa.dur,
+            'mag0': blsa.mag0,
+            'dmag': blsa.dmag}

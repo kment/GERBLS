@@ -48,20 +48,26 @@ def run_bls(time: npt.ArrayLike,
 
     Returns
     -------
-    np.ndarray
-        Array of tested periods.
-    np.ndarray
-        BLS statistic (Delta chi-squared) for each tested period.
+    dict
+        Dictionary with BLS results:
+        `P` is the list of tested periods
+        `dchi2` is the BLS statistic (Delta chi squared) at each period
+        `t0` is the best-fit transit mid-point at each period
+        `dur` is the best-fit duration at each period
+        `mag0` is the best-fit flux baseline at each period
+        `dmag` is the best-fit transit depth at each period
     """
 ```
 
 For example, running the following Python script generates a BLS spectrum for orbital periods between 0.4 and 10 days, where the light curve has been stored in arrays `time`, `mag`, and `err`:
 ```
 from gerbls import run_bls
-P, dchi2 = run_bls(time, mag, err, 0.4, 10)
+results = run_bls(time, mag, err, 0.4, 10)
 ```
 
-The fast-folding BLS requires data to be evenly spaced in time. `gerbls.run_bls` provides an optional parameter `t_samp` that can be used to resample (bin) the data to the required cadence before running the BLS. Increasing this value will make the BLS run faster; however, one should make sure that any real transits in the data are at least a few times larger than the value for `t_samp` so they do not get removed by the binning. If no value is provided for `t_samp`, the median time sampling of the input data is used: this works well if the input `time` array is already close to evenly sampled.
+In this case, `results` is a Python dictionary with the keys defined above in the function description.
+
+The fast-folding BLS requires data to be evenly spaced in time. `gerbls.run_bls` provides an optional parameter `t_samp` that can be used to resample (bin) the data to the required cadence before running the BLS. **Increasing this value will make the BLS run faster**; however, one should make sure that any real transits in the data are at least a few times larger than the value for `t_samp` so they do not get removed by the binning. If no value is provided for `t_samp`, the median time sampling of the input data is used: this works well if the input `time` array is already close to evenly sampled.
 
 The function `gerbls.run_bls` returns two arrays: a list of tested orbital periods `P` (in days) and a list of BLS statistics `dchi2` for each tested period. The searched periods are evenly spaced in frequency, and the spacing is set by the time sampling of the data. The BLS statistic `dchi2` ($\Delta\chi^2$) is the difference between the total $\chi^2$ parameters of a box-shaped model and a constant flux model fit to the data. In the case of pure Gaussian white noise, the signal-to-noise ratio of the fitted transit can be estimated as $\sqrt{\Delta\chi^2}$.
 
