@@ -13,6 +13,7 @@
 #include "riptide/snr.hpp"
 #include "riptide/transforms.hpp"
 #include <cmath>
+#include <functional>
 #include <iostream>
 #include <tuple>
 #include <vector>
@@ -87,11 +88,9 @@ void chisq_row(const T* __restrict__ wprod, const T* __restrict__ wts, const siz
     }
 }
 
-/*
-Compute the periodogram of a time series that has been normalised to zero mean and unit variance.
-Outputs are: trial periods (num_periods elements), number of phase bins used in the fold (num_periods elements), 
-and signal to noise ratio (num_periods * num_widths elements)
-*/
+// Compute the periodogram of a time series that has been normalised to zero mean and unit variance.
+// get_max_duration(P) should return the max transit duration at the given orbital period P
+// Output: vector of BLSResult<T> containing the best fit for each tested orbital period
 template <typename T>
 std::vector<BLSResult<T>> periodogram(
     const T* __restrict__ mag,
@@ -99,7 +98,7 @@ std::vector<BLSResult<T>> periodogram(
     size_t size,
     double tsamp,
     //const std::vector<size_t>& widths,
-    const Target& target,
+    std::function<double(double)> get_max_duration,
     double period_min,
     double period_max)
     {
@@ -161,7 +160,7 @@ std::vector<BLSResult<T>> periodogram(
         //const float stdnoise = 1.0; //sqrt(rows * downsampled_variance(size, f));
         const double period_ceil = std::min(period_max_samples, bins + 1.0);
         const size_t rows_eval = std::min(rows, riptide::ceilshift(rows, bins, period_ceil));
-        const size_t max_width = 1.3 * get_transit_dur((bins + 1) * tsamp, target.M, target.R, 0) / tsamp + 1;
+        const size_t max_width = get_max_duration((bins + 1) * tsamp) / tsamp + 1;
 
         riptide::transform<T>(wprod.get(), rows, bins, ffabuf, ffamag);
         riptide::transform<T>(weights.get(), rows, bins, ffabuf, ffawts);
@@ -185,9 +184,9 @@ std::vector<BLSResult<T>> periodogram(
     }
 // Explicit instantiations for float and double
 template std::vector<BLSResult<float>> periodogram(const float* __restrict__, const float* __restrict__, size_t, double, 
-    const Target&, double, double);
+    std::function<double(double)>, double, double);
 template std::vector<BLSResult<double>> periodogram(const double* __restrict__, const double* __restrict__, size_t, double, 
-    const Target&, double, double);
+    std::function<double(double)>, double, double);
 
 /*
 Returns the total number of trial periods in a periodogram

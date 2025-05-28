@@ -17,6 +17,9 @@ cdef class pyBLSModel:
     def freq(self):
         return np.asarray(self.view_freq())
     
+    def get_max_duration(self, double P):
+        return self.cPtr.get_max_duration(P)
+    
     @property
     def N_freq(self):
         return self.cPtr.N_freq()
@@ -53,11 +56,12 @@ cdef class pyFastBLS(pyBLSModel):
             del self.dPtr
     
     def create(self, pyDataContainer data, double min_period, double max_period, double t_samp = 0., 
-               double M_star = 1., double R_star = 1., bool_t verbose = True):
+               double M_star = 1., double R_star = 1., bool_t verbose = True, int max_duration_mode = 0,
+               double max_duration_factor = 0.):
         cdef Target* target = new Target()
         target.M = M_star
         target.R = R_star
-        self.dPtr = new BLSModel_FFA(data.cPtr[0], 1./max_period, 1./min_period, target)
+        self.dPtr = new BLSModel_FFA(data.cPtr[0], 1./max_period, 1./min_period, target, max_duration_mode, max_duration_factor)
         if t_samp > 0:
             self.t_samp = t_samp
         else:

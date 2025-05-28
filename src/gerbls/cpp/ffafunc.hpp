@@ -2,6 +2,7 @@
 #define FFAFUNC_HPP_
 
 #include "structure.hpp"
+#include <functional>
 #include <tuple>
 #include <vector>
 
@@ -34,7 +35,7 @@ std::vector<BLSResult<T>> periodogram(
     size_t size,
     double tsamp,
     //const std::vector<size_t>& widths,
-    const Target&,
+    std::function<double(double)> get_max_duration,
     double period_min,
     double period_max);
 

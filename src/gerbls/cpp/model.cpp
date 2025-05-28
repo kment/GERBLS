@@ -18,22 +18,51 @@
 #include <type_traits>
 
 // Constructor
-// If f_min or f_max are 0 then the default values are used
-// If no target is given, use default values
-BLSModel::BLSModel(DataContainer& data_ref, double f_min_, double f_max_, const Target* targetPtr) {
+// If any numeric value is 0 then the default value is used
+BLSModel::BLSModel(DataContainer& data_ref, 
+				   double f_min,
+				   double f_max,
+				   const Target* targetPtr,
+				   int max_duration_mode,
+				   double max_duration_factor) {
 
 	data = &data_ref;
+	target = targetPtr;
 
-	// Set min and max frequencies
-	if (f_min_ > 0)
-		f_min = f_min_;
-	if (f_max_ > 0)
-		f_max = f_max_;
+	if (f_min > 0)
+		this->f_min = f_min;
+	if (f_max > 0)
+		this->f_max = f_max;
+	if (max_duration_mode > 0)
+		this->max_duration_mode = max_duration_mode;
+	if (max_duration_factor > 0)
+		this->max_duration_factor = max_duration_factor;
 
-    if (targetPtr == nullptr)
-        target = new Target();
-    else target = targetPtr;
+}
 
+// Get the maximum tested transit duration at a given period P
+double BLSModel::get_max_duration(double P) {
+
+	switch (max_duration_mode) {
+
+		// Constant max duration
+		case 1:
+			return max_duration_factor;
+
+		// Max duration proportional to the orbital period
+		case 2:
+			return max_duration_factor * P;
+
+		// Max duration proportional to the predicted physical transit duration
+		case 3:
+			if (target == nullptr) {
+				throw std::runtime_error("Target must not be null with max_duration_mode==3.");
+				return 0;
+			}
+			else
+				return max_duration_factor * get_transit_dur(P, target->M, target->R, 0);
+
+	}
 }
 
 // Get number of frequencies
@@ -44,12 +73,6 @@ size_t BLSModel::N_freq() {
 void BLSModel::run(bool verbose) {
 	std::cout << "run() is not defined for an object of type " << typeid(*this).name();
 }
-
-// Constructor
-// If f_min or f_max are 0 then the default values are used
-// If no target is given, use default values
-BLSModel_FFA::BLSModel_FFA(DataContainer& data_ref, double f_min_, double f_max_, Target* targetPtr) :
-						  BLSModel(data_ref, f_min_, f_max_, targetPtr) { };
 
 // Generate required results
 template <typename T>
@@ -111,8 +134,11 @@ void BLSModel_FFA::run_prec(bool verbose) {
 	dchi2.assign(length, 0);
 	chi2_t0.assign(length, 0);*/
 
+	// Function wrapper to return the maximum tested transit duration at each period
+	auto get_max_duration_ = std::bind(&BLSModel::get_max_duration, this, std::placeholders::_1);
+
 	auto t_start = std::chrono::high_resolution_clock::now();
-	std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(mag.data(), wts.data(), mag.size(), t_samp, *target, 1/f_max, 1/f_min));
+	std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(mag.data(), wts.data(), mag.size(), t_samp, get_max_duration_, 1/f_max, 1/f_min));
 	auto t_end = std::chrono::high_resolution_clock::now();
 
 	if (verbose) {
