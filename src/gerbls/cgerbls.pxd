@@ -12,14 +12,16 @@ cdef extern from "cpp/ffafunc.hpp":
 
 cdef extern from "cpp/model.hpp":
     cdef cppclass BLSModel:
+        int max_duration_mode
+        double max_duration_factor
         vector[double] chi2_dmag
         vector[double] chi2_dt
         vector[double] chi2_mag0
         vector[double] chi2_t0
         vector[double] dchi2
         vector[double] freq
-        BLSModel(DataContainer, double, double, Target*)
         
+        double get_max_duration(double)
         size_t N_freq()
         void run(bool_t)
     
@@ -32,7 +34,7 @@ cdef extern from "cpp/model.hpp":
         vector[size_t] foldbins
         vector[double] snr
         vector[size_t] t0
-        BLSModel_FFA(DataContainer, double, double, Target*)
+        BLSModel_FFA(DataContainer, double, double, Target*, int, double)
         
         void run_double(bool_t)
 

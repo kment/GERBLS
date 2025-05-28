@@ -19,6 +19,8 @@ struct BLSModel {
 	// Settings
 	double f_min = 0.025;
 	double f_max = 5;
+	int max_duration_mode = 2;				// Affects get_max_duration()
+	double max_duration_factor = 0.1;		// Affects get_max_duration()
 
 	// Pointer to associated data
 	DataContainer* data = nullptr;
@@ -30,9 +32,10 @@ struct BLSModel {
 	std::vector<double> freq;
 
 	// Constructor and destructor
-	BLSModel(DataContainer&, double=0, double=0, const Target* =nullptr);
+	BLSModel(DataContainer&, double=0, double=0, const Target* =nullptr, int=0, double=0);
 	virtual ~BLSModel() = default;
 
+	double get_max_duration(double);		// Maximum transit duration to test at a given period
 	size_t N_freq();	// Get number of frequencies
 
 	// Virtual functions to be overwritten
@@ -61,8 +64,8 @@ struct BLSModel_FFA: public BLSModel {
 	std::vector<double> snr;
 	std::vector<size_t> t0;
 
-	// Constructors
-	BLSModel_FFA(DataContainer&, double=0, double=0, Target* =nullptr);
+	// Inherit constructor from parent
+	using BLSModel::BLSModel;
 
 	// Methods
 	template <typename T> void process_results(std::vector<BLSResult<T>>&);
