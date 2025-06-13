@@ -15,9 +15,9 @@
 
 // Bin data by period P
 // Bin times will be [0,P/N_bins), ..., [P-P/N_bins,P)
-void bin(double P, int N_bins, const DataContainer* data, double* bin_mags, double* bin_errors, int* N_bins_real) {
+void bin(double P, size_t N_bins, const DataContainer* data, double* bin_mags, double* bin_errors, size_t* N_bins_real) {
 
-	int i;
+	size_t i;
 	*N_bins_real = 0;
 
 	for (i = 0; i < N_bins; i++) {

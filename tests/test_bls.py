@@ -2,6 +2,9 @@ import gerbls
 import numpy as np
 
 def test_bls_basic(phot_test):
+    """
+    Test for the BLS basic usage function.
+    """
 
     correct_P = 1.37
 
@@ -9,9 +12,33 @@ def test_bls_basic(phot_test):
                              min_period=0.4, max_period=10., t_samp=10/60/24)
     
     assert 'P' in results
+    assert 'dchi2' in results
+    assert len(results['P'] > 0)
     assert abs(results['P'][np.argmax(results['dchi2'])] - correct_P) < 0.001
 
+def test_bls_bf(phot_test):
+    """
+    Test for the brute-force BLS.
+    """
+
+    correct_P = 1.37
+
+    target = gerbls.pyTarget()
+
+    bls = gerbls.pyBLSModel_bf()
+    bls.create(phot_test, 0.4, 10., target, t_bins=10/60/24)
+    bls.run()
+
+    blsa = gerbls.pyBLSAnalyzer(bls)
+    assert len(blsa.P) > 0
+
+    best_model = blsa.generate_models(1)[0]
+    assert abs(best_model.P - correct_P) < 0.001
+
 def test_bls_fast(phot_test):
+    """
+    Test for the fast-folded BLS.
+    """
 
     correct_P = 1.37
 
@@ -20,7 +47,7 @@ def test_bls_fast(phot_test):
     bls.run()
 
     blsa = gerbls.pyBLSAnalyzer(bls)
-    best_model = blsa.generate_models(1)[0]
-
     assert len(blsa.P) > 0
+
+    best_model = blsa.generate_models(1)[0]
     assert abs(best_model.P - correct_P) < 0.001

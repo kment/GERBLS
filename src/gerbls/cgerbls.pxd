@@ -25,6 +25,10 @@ cdef extern from "cpp/model.hpp":
         size_t N_freq()
         void run(bool_t)
     
+    cdef cppclass BLSModel_bf(BLSModel):
+        BLSModel_bf(DataContainer, double, double, Target*, double, double, size_t, int, double)
+        BLSModel_bf(DataContainer, vector[double], Target*, double, size_t, int, double)
+    
     cdef cppclass BLSModel_FFA(BLSModel):
         double t_samp
         unique_ptr[DataContainer] rdata

@@ -45,6 +45,34 @@ cdef class pyBLSModel:
     cdef double [::1] view_t0(self):
         return <double [:self.N_freq]>self.cPtr.chi2_t0.data()
 
+cdef class pyBLSModel_bf(pyBLSModel):
+    cdef BLSModel_bf* dPtr
+    
+    def __cinit__(self):
+        self.alloc = False
+    
+    def __dealloc__(self):
+        if self.alloc:
+            del self.dPtr
+    
+    def create(self, pyDataContainer data, double min_period, double max_period, pyTarget target,
+               double dt_per_step = 0., double t_bins = 0., size_t N_bins_min = 0,
+               int max_duration_mode = 0, double max_duration_factor = 0.):
+        self.dPtr = new BLSModel_bf(data.cPtr[0], 1/max_period, 1/min_period, target.cPtr, 
+                                    dt_per_step, t_bins, N_bins_min, max_duration_mode, 
+                                    max_duration_factor)
+        self.cPtr = self.dPtr
+        self.alloc = True
+    
+    # Create with a given frequency array
+    def create_from_freq(self, pyDataContainer data, double[:] freq_, pyTarget target,
+                         double t_bins = 0., size_t N_bins_min = 0, int max_duration_mode = 0,
+                         double max_duration_factor = 0.):
+        self.dPtr = new BLSModel_bf(data.cPtr[0], list(freq_), target.cPtr, t_bins, N_bins_min,
+                                    max_duration_mode, max_duration_factor)
+        self.cPtr = self.dPtr
+        self.alloc = True
+
 cdef class pyFastBLS(pyBLSModel):
     cdef BLSModel_FFA* dPtr
     

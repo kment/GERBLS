@@ -56,11 +56,17 @@ double BLSModel::get_max_duration(double P) {
 		// Max duration proportional to the predicted physical transit duration
 		case 3:
 			if (target == nullptr) {
-				throw std::runtime_error("Target must not be null with max_duration_mode==3.");
+				throw std::runtime_error("Target must not be null with max_duration_mode == 3.");
 				return 0;
 			}
 			else
 				return max_duration_factor * get_transit_dur(P, target->M, target->R, 0);
+		
+		// Invalid duration code
+		default:
+			throw std::runtime_error("BLSModel::get_max_duration() called with invalid "
+									 "max_duration_mode = " + std::to_string(max_duration_mode));
+			return 0;
 
 	}
 }
@@ -72,6 +78,165 @@ size_t BLSModel::N_freq() {
 
 void BLSModel::run(bool verbose) {
 	std::cout << "run() is not defined for an object of type " << typeid(*this).name();
+}
+
+// Constructor
+// If any numeric value is 0 then the default value is used
+// If no target is given, use default values
+BLSModel_bf::BLSModel_bf(DataContainer& data_ref, 
+						 double f_min,
+						 double f_max,
+                   		 const Target* targetPtr, 
+						 double dt_per_step, 
+						 double t_bins,
+						 size_t N_bins_min,
+						 int max_duration_mode,
+				   		 double max_duration_factor) : 
+	BLSModel(data_ref, f_min, f_max, targetPtr, max_duration_mode, max_duration_factor) {
+
+	// Override numeric values if given
+	if (dt_per_step > 0)
+    	this->dt_per_step = dt_per_step;
+    
+	// Multiplicative frequency step (round to 8 decimal places)
+	double df = this->dt_per_step / data_ref.get_time_range();
+	df = round(df * 1e8) / 1e8;
+
+	// Generate frequencies
+	size_t f_steps = (int)(log(f_max / f_min) / log(1 + df) + 1);
+	freq.resize(f_steps);
+	freq[0] = f_min;
+	for (size_t i = 1; i < f_steps; i++)
+		freq[i] = freq[i-1] * (1 + df);
+
+	initialize(t_bins, N_bins_min);
+
+}
+
+// Constructor with a fixed array of search frequencies
+BLSModel_bf::BLSModel_bf(DataContainer& data_ref,
+						 const std::vector<double>& freq,
+						 const Target* targetPtr,
+						 double t_bins,
+						 size_t N_bins_min,
+						 int max_duration_mode,
+				   		 double max_duration_factor) :
+	BLSModel(data_ref, 0, 0, targetPtr, max_duration_mode, max_duration_factor) {	
+
+	// Set min and max frequencies
+	f_min = *std::min_element(freq.begin(), freq.end());
+	f_max = *std::max_element(freq.begin(), freq.end());
+	
+	dt_per_step = 0;
+	this->freq = freq;
+
+	initialize(t_bins, N_bins_min);
+
+}
+
+// Initial operations (called by constructors)
+void BLSModel_bf::initialize(double t_bins, size_t N_bins_min) {
+
+	if (t_bins > 0)
+		this->t_bins = t_bins;
+	if (N_bins_min > 0)
+		this->N_bins_min = N_bins_min;
+
+	// Expand chi2 vectors
+	chi2.resize(N_freq());
+	dchi2.resize(N_freq());
+	chi2r.resize(N_freq());
+	chi2_mag0.resize(N_freq());
+	chi2_dmag.resize(N_freq());
+	chi2_t0.resize(N_freq());
+	chi2_dt.resize(N_freq());
+
+}
+
+void BLSModel_bf::run(bool verbose) {
+
+	double P, Z, Zi, mi, dchi2_, dchi2_min, m0_best, dmag_best;
+	//double dt_frac_min, dt_frac_max;
+	size_t N_bins, N_bins_real, t_start_best, dt_best, dt_min, dt_max;
+
+	// Arrays for binned magnitudes
+	size_t N_bins_max = std::max(N_bins_min, (size_t)(1 / f_min / t_bins));
+	double mag [N_bins_max], mag_err [N_bins_max];
+
+	// Process data
+	data->calculate_mag_frac();
+	
+	for (size_t i = 0; i < N_freq(); i++) {
+
+		if ((verbose) and (i % std::max(1, (int)(N_freq() / 100)) == 0))
+			std::cout << "BLS     NFREQ: " << N_freq() << "     STATUS: " << (int)(100 * i / N_freq()) << "%          \r" << std::flush;
+
+		P = 1 / freq[i];
+
+		dchi2_min = 0;
+		m0_best = 0;
+		dmag_best = 0;
+		t_start_best = 0;
+		dt_best = 0;
+        
+		// Calculate binned magnitudes
+		N_bins = std::max(N_bins_min, (size_t)(P / t_bins));
+		bin(P, N_bins, data, mag, mag_err, &N_bins_real);
+        
+		// Estimate the range of transit durations
+		//get_phase_range(P, &dt_frac_min, &dt_frac_max);
+		//dt_min = (int)(N_bins * dt_frac_min);
+		//dt_max = (int)(N_bins * dt_frac_max) + 1;
+		dt_min = 1;
+		dt_max = (size_t)(N_bins * get_max_duration(P) / P) + 1;
+
+		// Obtain the sum of 1 / mag_err^2
+		Z = 0;
+		for (size_t j = 0; j < N_bins; j++)
+			Z += 1 / SQ(mag_err[j]);
+        
+		// Loop over transit starts (in bins)
+		for (size_t t_start = 0; t_start < N_bins; t_start++) {
+
+			mi = 0;
+			Zi = 0;
+
+			// Loop over transit durations (in bins)
+			for (size_t dt = 0; dt < dt_max; dt++) {
+
+				mi += mag[(t_start + dt) % N_bins] / SQ(mag_err[(t_start + dt) % N_bins]);
+				Zi += 1 / SQ(mag_err[(t_start + dt) % N_bins]);
+				dchi2_ = -(Zi == Z ? 0 : SQ(mi) / Zi / (1 - Zi / Z));
+
+				if ((dt >= dt_min - 1) and (dchi2_ < dchi2_min)) {
+
+					m0_best = -mi / Z / (1 - Zi / Z);
+					dmag_best = -mi / Zi / (1 - Zi / Z);
+					t_start_best = t_start;
+					dt_best = dt;
+					dchi2_min = dchi2_;
+
+				}
+
+			}
+		}
+        
+		// Calculate chi2 for the best combination (= dchi2 + chi2_const)
+		dchi2[i] = dchi2_min;
+		chi2[i] = dchi2_min;
+		for (size_t j = 0; j < N_bins; j++)
+			chi2[i] += SQ(mag[j] / mag_err[j]);
+		chi2r[i] = chi2[i] / (N_bins_real - 1);
+		chi2_mag0[i] = data->mag_avg * (m0_best + 1);
+		chi2_dmag[i] = dmag_best * chi2_mag0[i];
+		chi2_t0[i] = P * t_start_best / N_bins;
+		chi2_dt[i] = P * (dt_best + 1) / N_bins;
+
+	}
+
+	if (verbose)
+		std::cout << "BLS     NFREQ: " << N_freq() << "     STATUS: 100%\n";
+
 }
 
 // Generate required results

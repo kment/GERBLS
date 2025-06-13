@@ -18,7 +18,7 @@
 #define SQ(x) ((x) * (x))
 
 // Bin measurements by period
-void bin(double, int, const DataContainer*, double*, double*, int*);
+void bin(double, size_t, const DataContainer*, double*, double*, size_t*);
 
 // Draw a random number from a power prior distribution
 double gdraw(double, double, double);

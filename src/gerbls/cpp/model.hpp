@@ -17,8 +17,8 @@
 struct BLSModel {
 
 	// Settings
-	double f_min = 0.025;
-	double f_max = 5;
+	double f_min = 0.025;					// Minimum search frequency
+	double f_max = 5;						// Maximum search frequency
 	int max_duration_mode = 2;				// Affects get_max_duration()
 	double max_duration_factor = 0.1;		// Affects get_max_duration()
 
@@ -46,7 +46,31 @@ struct BLSModel {
 
 };
 
-// BLS model (brute force) removed
+// BLS model (brute force)
+struct BLSModel_bf: public BLSModel {
+
+	// Grid search ranges and steps
+	double dt_per_step = 0.003; 	// Maximum orbital shift between frequencies in days
+	double t_bins = 0.007; 			// Time bin width in days
+	size_t N_bins_min = 100; 			// Minimum number of bins
+
+	// Arrays to store best chi2 values for each tested frequency
+	std::vector<double> chi2, chi2r;
+
+	// Constructors
+	BLSModel_bf(DataContainer&, double=0, double=0, const Target* =nullptr,
+        	 	double=0, double=0, size_t=0, int=0, double=0);
+	BLSModel_bf(DataContainer&, const std::vector<double>&, const Target* =nullptr, 
+				double=0, size_t=0, int=0, double=0);
+
+	// Methods to overwrite parent virtual functions
+	void run(bool=true);
+
+	// Private methods
+	private:
+		void initialize(double, size_t);
+
+};
 
 // BLS model (FFA)
 struct BLSModel_FFA: public BLSModel {

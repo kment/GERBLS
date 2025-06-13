@@ -95,7 +95,7 @@ cdef class pyDataContainer:
         for sec_ in self.sectors:
             mask = (self.sec == sec_)
             factor = np.std(self.mag[mask]) / np.median(self.err[mask])
-            for i in range(self.size):
+            for i in range(self.cPtr.size):
                 if sec[i] == sec_:
                     self.cPtr.err[i] *= factor
     
