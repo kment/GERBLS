@@ -51,11 +51,6 @@ def run_bls(time: npt.ArrayLike,
         `dmag` is the best-fit transit depth at each period
     """
 
-    # Check arguments for validity
-    allowed_duration_modes = {'constant': 1, 'fractional': 2, 'physical': 3}
-    assert max_duration_mode in allowed_duration_modes, \
-        f"max_duration_mode must be one of: {allowed_duration_modes.keys()}"
-
     # Make sure the data is time-sorted and formatted as Numpy arrays
     if np.all(np.diff(time) >= 0):
         time = np.array(time)
@@ -73,9 +68,9 @@ def run_bls(time: npt.ArrayLike,
 
     # Set up and run the BLS
     bls = gerbls.pyFastBLS()
-    bls.create(phot, min_period, max_period, t_samp, 
-               max_duration_mode=allowed_duration_modes[max_duration_mode],
-               max_duration_factor=max_duration_factor)
+    bls.setup(phot, min_period, max_period, t_samp=t_samp,
+              duration_mode=max_duration_mode,
+              max_duration_factor=max_duration_factor)
     bls.run(verbose=True)
 
     # Return the BLS spectrum

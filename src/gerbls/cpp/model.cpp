@@ -15,6 +15,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <tuple>
 #include <type_traits>
 
 // Constructor
@@ -23,7 +24,8 @@ BLSModel::BLSModel(DataContainer& data_ref,
 				   double f_min,
 				   double f_max,
 				   const Target* targetPtr,
-				   int max_duration_mode,
+				   int duration_mode,
+				   double min_duration_factor,
 				   double max_duration_factor) {
 
 	data = &data_ref;
@@ -33,42 +35,56 @@ BLSModel::BLSModel(DataContainer& data_ref,
 		this->f_min = f_min;
 	if (f_max > 0)
 		this->f_max = f_max;
-	if (max_duration_mode > 0)
-		this->max_duration_mode = max_duration_mode;
+	if (duration_mode > 0)
+		this->duration_mode = duration_mode;
+	if (min_duration_factor > 0)
+		this->min_duration_factor = min_duration_factor;
 	if (max_duration_factor > 0)
 		this->max_duration_factor = max_duration_factor;
 
 }
 
-// Get the maximum tested transit duration at a given period P
-double BLSModel::get_max_duration(double P) {
+// Get the minimum and maximum tested transit duration at a given period P
+std::tuple<double, double> BLSModel::get_duration_limits(double P) {
 
-	switch (max_duration_mode) {
+	double min_duration, max_duration;
 
-		// Constant max duration
+	switch (duration_mode) {
+
+		// Constant duration limits
 		case 1:
-			return max_duration_factor;
+			min_duration = min_duration_factor;
+			max_duration = max_duration_factor;
+			break;
 
-		// Max duration proportional to the orbital period
+		// Duration limits proportional to the orbital period
 		case 2:
-			return max_duration_factor * P;
+			min_duration = min_duration_factor * P;
+			max_duration = max_duration_factor * P;
+			break;
 
-		// Max duration proportional to the predicted physical transit duration
+		// Duration limits proportional to the predicted physical transit duration
 		case 3:
 			if (target == nullptr) {
 				throw std::runtime_error("Target must not be null with max_duration_mode == 3.");
-				return 0;
+				return std::make_tuple(0, 0);
 			}
-			else
-				return max_duration_factor * get_transit_dur(P, target->M, target->R, 0);
+			else {
+				double transit_dur = get_transit_dur(P, target->M, target->R, 0);
+				min_duration = min_duration_factor * transit_dur;
+				max_duration = max_duration_factor * transit_dur;
+			}
+			break;
 		
 		// Invalid duration code
 		default:
 			throw std::runtime_error("BLSModel::get_max_duration() called with invalid "
-									 "max_duration_mode = " + std::to_string(max_duration_mode));
-			return 0;
+									 "duration_mode = " + std::to_string(duration_mode));
+			return std::make_tuple(0, 0);
 
 	}
+
+	return std::make_tuple(min_duration, max_duration);
 }
 
 // Get number of frequencies
@@ -90,9 +106,10 @@ BLSModel_bf::BLSModel_bf(DataContainer& data_ref,
 						 double dt_per_step, 
 						 double t_bins,
 						 size_t N_bins_min,
-						 int max_duration_mode,
+						 int duration_mode,
+						 double min_duration_factor,
 				   		 double max_duration_factor) : 
-	BLSModel(data_ref, f_min, f_max, targetPtr, max_duration_mode, max_duration_factor) {
+	BLSModel(data_ref, f_min, f_max, targetPtr, duration_mode, min_duration_factor, max_duration_factor) {
 
 	// Override numeric values if given
 	if (dt_per_step > 0)
@@ -119,9 +136,10 @@ BLSModel_bf::BLSModel_bf(DataContainer& data_ref,
 						 const Target* targetPtr,
 						 double t_bins,
 						 size_t N_bins_min,
-						 int max_duration_mode,
+						 int duration_mode,
+						 double min_duration_factor,
 				   		 double max_duration_factor) :
-	BLSModel(data_ref, 0, 0, targetPtr, max_duration_mode, max_duration_factor) {	
+	BLSModel(data_ref, 0, 0, targetPtr, duration_mode, min_duration_factor, max_duration_factor) {	
 
 	// Set min and max frequencies
 	f_min = *std::min_element(freq.begin(), freq.end());
@@ -156,7 +174,7 @@ void BLSModel_bf::initialize(double t_bins, size_t N_bins_min) {
 void BLSModel_bf::run(bool verbose) {
 
 	double P, Z, Zi, mi, dchi2_, dchi2_min, m0_best, dmag_best;
-	//double dt_frac_min, dt_frac_max;
+	double dt_min_P, dt_max_P;
 	size_t N_bins, N_bins_real, t_start_best, dt_best, dt_min, dt_max;
 
 	// Arrays for binned magnitudes
@@ -184,11 +202,9 @@ void BLSModel_bf::run(bool verbose) {
 		bin(P, N_bins, data, mag, mag_err, &N_bins_real);
         
 		// Estimate the range of transit durations
-		//get_phase_range(P, &dt_frac_min, &dt_frac_max);
-		//dt_min = (int)(N_bins * dt_frac_min);
-		//dt_max = (int)(N_bins * dt_frac_max) + 1;
-		dt_min = 1;
-		dt_max = (size_t)(N_bins * get_max_duration(P) / P) + 1;
+		std::tie(dt_min_P, dt_max_P) = get_duration_limits(P);
+		dt_min = std::max((size_t)(1), (size_t)(N_bins * dt_min_P / P));
+		dt_max = std::max(dt_min, (size_t)(N_bins * dt_max_P / P));
 
 		// Obtain the sum of 1 / mag_err^2
 		Z = 0;
@@ -300,10 +316,10 @@ void BLSModel_FFA::run_prec(bool verbose) {
 	chi2_t0.assign(length, 0);*/
 
 	// Function wrapper to return the maximum tested transit duration at each period
-	auto get_max_duration_ = std::bind(&BLSModel::get_max_duration, this, std::placeholders::_1);
+	auto get_duration_limits_ = std::bind(&BLSModel::get_duration_limits, this, std::placeholders::_1);
 
 	auto t_start = std::chrono::high_resolution_clock::now();
-	std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(mag.data(), wts.data(), mag.size(), t_samp, get_max_duration_, 1/f_max, 1/f_min));
+	std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(mag.data(), wts.data(), mag.size(), t_samp, get_duration_limits_, 1/f_max, 1/f_min));
 	auto t_end = std::chrono::high_resolution_clock::now();
 
 	if (verbose) {

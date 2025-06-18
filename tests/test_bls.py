@@ -11,9 +11,17 @@ def test_bls_basic(phot_test):
     results = gerbls.run_bls(phot_test.rjd, phot_test.mag, phot_test.err, 
                              min_period=0.4, max_period=10., t_samp=10/60/24)
     
+    # Check the validity of BLS results
     assert 'P' in results
-    assert 'dchi2' in results
-    assert len(results['P'] > 0)
+    assert len(results['P']) > 0
+    assert not np.any(np.isnan(results['P']))
+    assert not np.any(np.isnan(results['dchi2']))
+    assert not np.any(np.isnan(results['t0']))
+    assert not np.any(np.isnan(results['dur']))
+    assert not np.any(np.isnan(results['mag0']))
+    assert not np.any(np.isnan(results['dmag']))
+    
+    # Check whether the correct period was recovered
     assert abs(results['P'][np.argmax(results['dchi2'])] - correct_P) < 0.001
 
 def test_bls_bf(phot_test):
@@ -23,10 +31,8 @@ def test_bls_bf(phot_test):
 
     correct_P = 1.37
 
-    target = gerbls.pyTarget()
-
-    bls = gerbls.pyBLSModel_bf()
-    bls.create(phot_test, 0.4, 10., target, t_bins=10/60/24)
+    bls = gerbls.pyBruteForceBLS()
+    bls.setup(phot_test, 0.4, 10., t_bins=10/60/24)
     bls.run()
 
     blsa = gerbls.pyBLSAnalyzer(bls)
@@ -43,7 +49,7 @@ def test_bls_fast(phot_test):
     correct_P = 1.37
 
     bls = gerbls.pyFastBLS()
-    bls.create(phot_test, 0.4, 10., t_samp=10/60/24)
+    bls.setup(phot_test, 0.4, 10., t_samp=10/60/24)
     bls.run()
 
     blsa = gerbls.pyBLSAnalyzer(bls)

@@ -56,12 +56,12 @@ void array_dchi2_max(const T* __restrict__ prod, const T* __restrict__ wts, cons
 
 // Output: results (must be array of size wprod.rows)
 template <typename T>
-void chisq_2d(riptide::ConstBlock<T> wprod, riptide::ConstBlock<T> weights, const size_t max_width, BLSResult<T>* results) {
+void chisq_2d(riptide::ConstBlock<T> wprod, riptide::ConstBlock<T> weights, const size_t min_width, const size_t max_width, BLSResult<T>* results) {
 
     for (size_t i = 0; i < wprod.rows; ++i)
         {
         //snr1(block.rowptr(i), block.cols, widths, stdnoise, out);
-        chisq_row<T>(wprod.rowptr(i), weights.rowptr(i), wprod.cols, max_width, *results);
+        chisq_row<T>(wprod.rowptr(i), weights.rowptr(i), wprod.cols, min_width, max_width, *results);
         results++;
         }
 }
@@ -69,7 +69,7 @@ void chisq_2d(riptide::ConstBlock<T> wprod, riptide::ConstBlock<T> weights, cons
 // Evaluate dchi2 for a fixed period (FFA row)
 // Output: BLSResult corresponding to the highest dchi2
 template <typename T>
-void chisq_row(const T* __restrict__ wprod, const T* __restrict__ wts, const size_t size, const size_t max_width, BLSResult<T>& result) {
+void chisq_row(const T* __restrict__ wprod, const T* __restrict__ wts, const size_t size, const size_t min_width, const size_t max_width, BLSResult<T>& result) {
 
     T cpfsum1[size + max_width];
     T cpfsum2[size + max_width];
@@ -79,7 +79,7 @@ void chisq_row(const T* __restrict__ wprod, const T* __restrict__ wts, const siz
     riptide::circular_prefix_sum<T>(wts, size, size + max_width, cpfsum2);
     const T wtotal = cpfsum2[size - 1]; // sum of weights
 
-    for (size_t width = 1; width <= max_width; width++) {
+    for (size_t width = min_width; width <= max_width; width++) {
 
         array_diff<T>(cpfsum1 + width, cpfsum1, size, inmag);
         array_diff<T>(cpfsum2 + width, cpfsum2, size, inwts);
@@ -89,7 +89,7 @@ void chisq_row(const T* __restrict__ wprod, const T* __restrict__ wts, const siz
 }
 
 // Compute the periodogram of a time series that has been normalised to zero mean and unit variance.
-// get_max_duration(P) should return the max transit duration at the given orbital period P
+// get_duration_limits(P) should return the min and max transit duration at the given orbital period P
 // Output: vector of BLSResult<T> containing the best fit for each tested orbital period
 template <typename T>
 std::vector<BLSResult<T>> periodogram(
@@ -98,11 +98,14 @@ std::vector<BLSResult<T>> periodogram(
     size_t size,
     double tsamp,
     //const std::vector<size_t>& widths,
-    std::function<double(double)> get_max_duration,
+    std::function<std::tuple<double, double>(double)> get_duration_limits,
     double period_min,
     double period_max)
     {
     //periodogram_check_arguments(size, tsamp, period_min, period_max, bins_min, bins_max);
+
+    // Temporary variables
+    double min_width_P, max_width_P;
 
     // Calculate periodogram length and allocate memory for output
     const size_t length = periodogram_length(size, tsamp, period_min, period_max);
@@ -160,14 +163,16 @@ std::vector<BLSResult<T>> periodogram(
         //const float stdnoise = 1.0; //sqrt(rows * downsampled_variance(size, f));
         const double period_ceil = std::min(period_max_samples, bins + 1.0);
         const size_t rows_eval = std::min(rows, riptide::ceilshift(rows, bins, period_ceil));
-        const size_t max_width = get_max_duration((bins + 1) * tsamp) / tsamp + 1;
+        std::tie(min_width_P, max_width_P) = get_duration_limits((bins + 1) * tsamp);
+        const size_t min_width = std::max((size_t)(1), (size_t)(min_width_P / tsamp));
+        const size_t max_width = std::max(min_width, (size_t)(max_width_P / tsamp));
 
         riptide::transform<T>(wprod.get(), rows, bins, ffabuf, ffamag);
         riptide::transform<T>(weights.get(), rows, bins, ffabuf, ffawts);
         
         auto block1 = riptide::ConstBlock<T>(ffamag, rows_eval, bins);
         auto block2 = riptide::ConstBlock<T>(ffawts, rows_eval, bins);
-        chisq_2d<T>(block1, block2, max_width, presult);
+        chisq_2d<T>(block1, block2, min_width, max_width, presult);
 
         for (size_t s = 0; s < rows_eval; ++s)
             {
@@ -184,9 +189,9 @@ std::vector<BLSResult<T>> periodogram(
     }
 // Explicit instantiations for float and double
 template std::vector<BLSResult<float>> periodogram(const float* __restrict__, const float* __restrict__, size_t, double, 
-    std::function<double(double)>, double, double);
+    std::function<std::tuple<double, double>(double)>, double, double);
 template std::vector<BLSResult<double>> periodogram(const double* __restrict__, const double* __restrict__, size_t, double, 
-    std::function<double(double)>, double, double);
+    std::function<std::tuple<double, double>(double)>, double, double);
 
 /*
 Returns the total number of trial periods in a periodogram

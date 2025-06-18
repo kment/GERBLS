@@ -11,6 +11,7 @@
 #include "ffafunc.hpp"
 #include "structure.hpp"
 #include <fstream>
+#include <tuple>
 #include <unordered_map>
 
 // BLS model (base class)
@@ -19,7 +20,8 @@ struct BLSModel {
 	// Settings
 	double f_min = 0.025;					// Minimum search frequency
 	double f_max = 5;						// Maximum search frequency
-	int max_duration_mode = 2;				// Affects get_max_duration()
+	int duration_mode = 2;					// Affects tested transit durations
+	double min_duration_factor = 0;			// Affects get_min_duration()
 	double max_duration_factor = 0.1;		// Affects get_max_duration()
 
 	// Pointer to associated data
@@ -32,10 +34,10 @@ struct BLSModel {
 	std::vector<double> freq;
 
 	// Constructor and destructor
-	BLSModel(DataContainer&, double=0, double=0, const Target* =nullptr, int=0, double=0);
+	BLSModel(DataContainer&, double=0, double=0, const Target* =nullptr, int=0, double=0, double=0);
 	virtual ~BLSModel() = default;
 
-	double get_max_duration(double);		// Maximum transit duration to test at a given period
+	std::tuple<double, double> get_duration_limits(double);	// Min and max transit duration to test at a given period
 	size_t N_freq();	// Get number of frequencies
 
 	// Virtual functions to be overwritten
@@ -59,9 +61,9 @@ struct BLSModel_bf: public BLSModel {
 
 	// Constructors
 	BLSModel_bf(DataContainer&, double=0, double=0, const Target* =nullptr,
-        	 	double=0, double=0, size_t=0, int=0, double=0);
+        	 	double=0, double=0, size_t=0, int=0, double=0, double=0);
 	BLSModel_bf(DataContainer&, const std::vector<double>&, const Target* =nullptr, 
-				double=0, size_t=0, int=0, double=0);
+				double=0, size_t=0, int=0, double=0, double=0);
 
 	// Methods to overwrite parent virtual functions
 	void run(bool=true);

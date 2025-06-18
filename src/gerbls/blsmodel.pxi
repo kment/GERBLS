@@ -17,8 +17,8 @@ cdef class pyBLSModel:
     def freq(self):
         return np.asarray(self.view_freq())
     
-    def get_max_duration(self, double P):
-        return self.cPtr.get_max_duration(P)
+    #def get_max_duration(self, double P):
+    #    return self.cPtr.get_max_duration(P)
     
     @property
     def N_freq(self):
@@ -45,7 +45,7 @@ cdef class pyBLSModel:
     cdef double [::1] view_t0(self):
         return <double [:self.N_freq]>self.cPtr.chi2_t0.data()
 
-cdef class pyBLSModel_bf(pyBLSModel):
+cdef class pyBruteForceBLS(pyBLSModel):
     cdef BLSModel_bf* dPtr
     
     def __cinit__(self):
@@ -55,21 +55,23 @@ cdef class pyBLSModel_bf(pyBLSModel):
         if self.alloc:
             del self.dPtr
     
-    def create(self, pyDataContainer data, double min_period, double max_period, pyTarget target,
-               double dt_per_step = 0., double t_bins = 0., size_t N_bins_min = 0,
-               int max_duration_mode = 0, double max_duration_factor = 0.):
-        self.dPtr = new BLSModel_bf(data.cPtr[0], 1/max_period, 1/min_period, target.cPtr, 
-                                    dt_per_step, t_bins, N_bins_min, max_duration_mode, 
-                                    max_duration_factor)
+    def setup(self, pyDataContainer data not None, double min_period, double max_period, pyTarget target = None,
+              double dt_per_step = 0., double t_bins = 0., size_t N_bins_min = 0,
+              str duration_mode = "", double min_duration_factor = 0., double max_duration_factor = 0.):
+        cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        self.dPtr = new BLSModel_bf(data.cPtr[0], 1/max_period, 1/min_period, targetPtr, 
+                                    dt_per_step, t_bins, N_bins_min, convert_duration_mode(duration_mode),
+                                    min_duration_factor, max_duration_factor)
         self.cPtr = self.dPtr
         self.alloc = True
     
-    # Create with a given frequency array
-    def create_from_freq(self, pyDataContainer data, double[:] freq_, pyTarget target,
-                         double t_bins = 0., size_t N_bins_min = 0, int max_duration_mode = 0,
-                         double max_duration_factor = 0.):
-        self.dPtr = new BLSModel_bf(data.cPtr[0], list(freq_), target.cPtr, t_bins, N_bins_min,
-                                    max_duration_mode, max_duration_factor)
+    # Setup with a pre-defined frequency array
+    def setup_from_freq(self, pyDataContainer data not None, double[:] freq_, pyTarget target = None,
+                        double t_bins = 0., size_t N_bins_min = 0, str duration_mode = "",
+                        double min_duration_factor = 0., double max_duration_factor = 0.):
+        cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        self.dPtr = new BLSModel_bf(data.cPtr[0], list(freq_), targetPtr, t_bins, N_bins_min,
+                                    convert_duration_mode(duration_mode), min_duration_factor, max_duration_factor)
         self.cPtr = self.dPtr
         self.alloc = True
 
@@ -82,22 +84,6 @@ cdef class pyFastBLS(pyBLSModel):
     def __dealloc__(self):
         if self.alloc:
             del self.dPtr
-    
-    def create(self, pyDataContainer data, double min_period, double max_period, double t_samp = 0., 
-               double M_star = 1., double R_star = 1., bool_t verbose = True, int max_duration_mode = 0,
-               double max_duration_factor = 0.):
-        cdef Target* target = new Target()
-        target.M = M_star
-        target.R = R_star
-        self.dPtr = new BLSModel_FFA(data.cPtr[0], 1./max_period, 1./min_period, target, max_duration_mode, max_duration_factor)
-        if t_samp > 0:
-            self.t_samp = t_samp
-        else:
-            self.t_samp = np.median(np.diff(data.rjd))
-            if verbose:
-                print(f"BLS time sampling set to the median cadence of input data: {self.t_samp*24*60:.2f} minutes.", flush=True)
-        self.cPtr = self.dPtr
-        self.alloc = True
     
     @property
     def dchi2(self):
@@ -119,6 +105,21 @@ cdef class pyFastBLS(pyBLSModel):
     
     def run_double(self, bool_t verbose=True):
         self.dPtr.run_double(verbose)
+    
+    def setup(self, pyDataContainer data, double min_period, double max_period, pyTarget target = None,
+              double t_samp = 0., bool_t verbose = True, str duration_mode = "",
+              double min_duration_factor = 0., double max_duration_factor = 0.):
+        cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        self.dPtr = new BLSModel_FFA(data.cPtr[0], 1./max_period, 1./min_period, targetPtr,
+                                     convert_duration_mode(duration_mode), min_duration_factor, max_duration_factor)
+        if t_samp > 0:
+            self.t_samp = t_samp
+        else:
+            self.t_samp = np.median(np.diff(data.rjd))
+            if verbose:
+                print(f"BLS time sampling set to the median cadence of input data: {self.t_samp*24*60:.2f} minutes.", flush=True)
+        self.cPtr = self.dPtr
+        self.alloc = True
     
     @property
     def t_samp(self):
@@ -244,3 +245,14 @@ cdef class pyBLSResult:
     @property
     def snr(self):
         return ((-self.dchi2)**0.5 if self.dchi2 < 0 else -np.inf)
+
+cdef int convert_duration_mode(str duration_mode):
+    """
+    Converts a string representation of a duration mode to its integer counterpart.
+    """
+    cdef dict allowed_duration_modes = {'': 0, 'constant': 1, 'fractional': 2, 'physical': 3}
+    assert (
+        duration_mode in allowed_duration_modes
+        ), f"duration_mode must be one of: {allowed_duration_modes.keys()}"
+    
+    return allowed_duration_modes[duration_mode]

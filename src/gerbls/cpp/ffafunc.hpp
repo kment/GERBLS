@@ -25,8 +25,8 @@ struct BLSResult {
 
 template <typename T> void array_diff(const T*, const T*, const size_t, T*);
 template <typename T> void array_dchi2_max(const T*, const T*, const size_t, const T, BLSResult<T>&, const size_t);
-template <typename T> void chisq_2d(riptide::ConstBlock<T>, riptide::ConstBlock<T>, const size_t, BLSResult<T>*);
-template <typename T> void chisq_row(const T* __restrict__, const T* __restrict__, const size_t, const size_t, BLSResult<T>&);
+template <typename T> void chisq_2d(riptide::ConstBlock<T>, riptide::ConstBlock<T>, const size_t, const size_t, BLSResult<T>*);
+template <typename T> void chisq_row(const T* __restrict__, const T* __restrict__, const size_t, const size_t, const size_t, BLSResult<T>&);
 
 template <typename T>
 std::vector<BLSResult<T>> periodogram(
@@ -35,7 +35,7 @@ std::vector<BLSResult<T>> periodogram(
     size_t size,
     double tsamp,
     //const std::vector<size_t>& widths,
-    std::function<double(double)> get_max_duration,
+    std::function<std::tuple<double, double>(double)> get_max_duration,
     double period_min,
     double period_max);
 
