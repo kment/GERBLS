@@ -36,15 +36,15 @@ cdef class pyDataContainer:
             self.allocate()
         self.cPtr.set(&rjd[0], &mag[0], &err[0], rjd.shape[0])
     
-    def clean(self, double P_rot=0, int N_flares=3):
-        cdef bool_t[::1] mask = np.zeros(self.cPtr.size, dtype=bool)
+    def clean(self, double P_rot = 0, int N_flares = 3):
+        cdef bool_t[::1] mask = np.zeros(self.cPtr.size, dtype = bool)
         data = pyDataContainer()
         data.cPtr = self.cPtr.clean(P_rot, &mask[0], N_flares).release()
         data.alloc = True
         return data, np.asarray(mask)
     
-    def clean_hw(self, double hw, int N_flares=3):
-        cdef bool_t[::1] mask = np.zeros(self.cPtr.size, dtype=bool)
+    def clean_hw(self, double hw, int N_flares = 3):
+        cdef bool_t[::1] mask = np.zeros(self.cPtr.size, dtype = bool)
         data = pyDataContainer()
         data.cPtr = self.cPtr.clean_hw(hw, &mask[0], N_flares).release()
         data.alloc = True
@@ -54,12 +54,12 @@ cdef class pyDataContainer:
     def err(self):
         return np.asarray(self.view_err())
     
-    def find_flares(self, double[:] mag0=None):
+    def find_flares(self, double[:] mag0 = None):
         from clean import find_flares
         return find_flares(self, mag0)
     
     @staticmethod
-    cdef pyDataContainer from_ptr(DataContainer* ptr, bool_t _alloc=False):
+    cdef pyDataContainer from_ptr(DataContainer* ptr, bool_t _alloc = False):
         cdef pyDataContainer data = pyDataContainer()
         data.cPtr = ptr
         data.alloc = _alloc
@@ -71,8 +71,11 @@ cdef class pyDataContainer:
     
     def mask(self, bool_t[:] mask):
         data = pyDataContainer()
-        data.store_sec(self.sec[mask], self.rjd[mask], self.mag[mask], self.err[mask],
-                       convert_to_flux=False)
+        data.store_sec(self.sec[mask], 
+                       self.rjd[mask], 
+                       self.mag[mask], 
+                       self.err[mask],
+                       convert_to_flux = False)
         return data
     
     def phase_folded(self, double P_rot, double t_extend):
@@ -142,7 +145,7 @@ cdef class pyDataContainer:
         return data
     
     # Store data by making a copy
-    def store(self, double[:] rjd_, double[:] mag_, double[:] err_, bool_t convert_to_flux=False):
+    def store(self, double[:] rjd_, double[:] mag_, double[:] err_, bool_t convert_to_flux = False):
         cdef Py_ssize_t i
         cdef double[::1] rjd = np.ascontiguousarray(rjd_)
         cdef double[::1] mag = np.ascontiguousarray(mag_)
@@ -155,15 +158,23 @@ cdef class pyDataContainer:
                 self.cPtr.mag[i] = 10.0**(-0.4 * self.cPtr.mag[i])
                 self.cPtr.err[i] = 0.4 * np.log(10.0) * self.cPtr.mag[i] * self.cPtr.err[i]
     
-    def store_sec(self, int[:] sec_, double[:] rjd_, double[:] mag_, double[:] err_, 
-                  bool_t convert_to_flux=False):
+    def store_sec(self,
+                  int[:] sec_,
+                  double[:] rjd_,
+                  double[:] mag_,
+                  double[:] err_, 
+                  bool_t convert_to_flux = False):
         cdef Py_ssize_t i
         self.store(rjd_, mag_, err_, convert_to_flux)
         for i in range(len(sec_)):
             self.cPtr.sec[i] = sec_[i]
             
-    def store_sec_d(self, double[:] sec_, double[:] rjd_, double[:] mag_, double[:] err_, 
-                    bool_t convert_to_flux=False):
+    def store_sec_d(self,
+                    double[:] sec_,
+                    double[:] rjd_,
+                    double[:] mag_,
+                    double[:] err_, 
+                    bool_t convert_to_flux = False):
         self.store_sec(np.asarray(sec_, dtype=np.int32), rjd_, mag_, err_, convert_to_flux)
     
     cdef double [::1] view_err(self):

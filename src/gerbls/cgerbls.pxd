@@ -25,7 +25,8 @@ cdef extern from "cpp/model.hpp":
         void run(bool_t)
     
     cdef cppclass BLSModel_bf(BLSModel):
-        BLSModel_bf(DataContainer, double, double, Target*, double, double, size_t, int, double, double)
+        BLSModel_bf(
+            DataContainer, double, double, Target*, double, double, size_t, int, double, double)
         BLSModel_bf(DataContainer, vector[double], Target*, double, size_t, int, double, double)
     
     cdef cppclass BLSModel_FFA(BLSModel):
