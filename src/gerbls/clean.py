@@ -4,6 +4,7 @@ from .exofunc import divide_into_chunks
 from scipy.signal import savgol_filter
 from typing import Union
 
+
 def clean_savgol(phot: gerbls.pyDataContainer,
                  N_flares: int = 3,
                  sigma_clip: float = 5.,
@@ -38,7 +39,7 @@ def clean_savgol(phot: gerbls.pyDataContainer,
     np.array
         Mask corresponding to valid cleaned data.
     """
-    
+
     # Mask corresponding to valid cleaned data
     cmask = np.ones(phot.size, dtype=bool)
 
@@ -61,13 +62,14 @@ def clean_savgol(phot: gerbls.pyDataContainer,
             if b - a < filter_width:
                 filter_width_ = b - a - (1 if (b - a) % 2 == 0 else 2)
                 if verbose:
-                    print(f"Warning: Savgol window length shortened {filter_width} => {filter_width_}")
+                    print(
+                        f"Warning: Savgol window length shortened {filter_width} => {filter_width_}")
             else:
                 filter_width_ = filter_width
             mag_fit[a:b] = savgol_filter(mag_data[a:b], filter_width_, 3)
-        
+
         return mag_fit[mask]
-    
+
     if sigma_clip > 0:
         mag0 = fit(cmask)
         cmask = (abs(phot.mag - mag0) <= phot.err * sigma_clip)
@@ -81,7 +83,8 @@ def clean_savgol(phot: gerbls.pyDataContainer,
 
     return cphot, cmask
 
-def find_flares(phot: gerbls.pyDataContainer, 
+
+def find_flares(phot: gerbls.pyDataContainer,
                 mag0: Union[np.ndarray, float] = 1):
     """
     Returns a mask with detected flares.
@@ -113,12 +116,12 @@ def find_flares(phot: gerbls.pyDataContainer,
     j = 0
     for i in i_start:
         if i < j:
-           continue
+            continue
         j = i + 4
         while i > 0 and mag[i-1] > 0:
             i -= 1
         while j < phot.size and mag[j] > 0:
             j += 1
         mask[i:j] = True
-    
+
     return mask
