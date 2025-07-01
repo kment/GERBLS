@@ -166,13 +166,14 @@ void BLSModel_bf::initialize(double t_bins, size_t N_bins_min)
     chi2_dmag.resize(N_freq());
     chi2_t0.resize(N_freq());
     chi2_dt.resize(N_freq());
+    N_bins.resize(N_freq());
 }
 
 void BLSModel_bf::run(bool verbose)
 {
     double P, Z, Zi, mi, dchi2_, dchi2_min, m0_best, dmag_best;
     double dt_min_P, dt_max_P;
-    size_t N_bins, N_bins_real, t_start_best, dt_best, dt_min, dt_max;
+    size_t N_bins_, N_bins_real, t_start_best, dt_best, dt_min, dt_max;
 
     // Arrays for binned magnitudes
     size_t N_bins_max = std::max(N_bins_min, (size_t)(1 / f_min / t_bins));
@@ -196,27 +197,27 @@ void BLSModel_bf::run(bool verbose)
         dt_best = 0;
 
         // Calculate binned magnitudes
-        N_bins = std::max(N_bins_min, (size_t)(P / t_bins));
-        bin(P, N_bins, data, mag, mag_err, &N_bins_real);
+        N_bins_ = std::max(N_bins_min, (size_t)(P / t_bins));
+        bin(P, N_bins_, data, mag, mag_err, &N_bins_real);
 
         // Estimate the range of transit durations
         std::tie(dt_min_P, dt_max_P) = get_duration_limits(P);
-        dt_min = std::max((size_t)(1), (size_t)(N_bins * dt_min_P / P));
-        dt_max = std::max(dt_min, (size_t)(N_bins * dt_max_P / P));
+        dt_min = std::max((size_t)(1), (size_t)(N_bins_ * dt_min_P / P));
+        dt_max = std::max(dt_min, (size_t)(N_bins_ * dt_max_P / P));
 
         // Obtain the sum of 1 / mag_err^2
         Z = 0;
-        for (size_t j = 0; j < N_bins; j++) Z += 1 / SQ(mag_err[j]);
+        for (size_t j = 0; j < N_bins_; j++) Z += 1 / SQ(mag_err[j]);
 
         // Loop over transit starts (in bins)
-        for (size_t t_start = 0; t_start < N_bins; t_start++) {
+        for (size_t t_start = 0; t_start < N_bins_; t_start++) {
             mi = 0;
             Zi = 0;
 
             // Loop over transit durations (in bins)
             for (size_t dt = 0; dt < dt_max; dt++) {
-                mi += mag[(t_start + dt) % N_bins] / SQ(mag_err[(t_start + dt) % N_bins]);
-                Zi += 1 / SQ(mag_err[(t_start + dt) % N_bins]);
+                mi += mag[(t_start + dt) % N_bins_] / SQ(mag_err[(t_start + dt) % N_bins_]);
+                Zi += 1 / SQ(mag_err[(t_start + dt) % N_bins_]);
                 dchi2_ = -(Zi == Z ? 0 : SQ(mi) / Zi / (1 - Zi / Z));
 
                 if ((dt >= dt_min - 1) and (dchi2_ < dchi2_min)) {
@@ -232,12 +233,13 @@ void BLSModel_bf::run(bool verbose)
         // Calculate chi2 for the best combination (= dchi2 + chi2_const)
         dchi2[i] = dchi2_min;
         chi2[i] = dchi2_min;
-        for (size_t j = 0; j < N_bins; j++) chi2[i] += SQ(mag[j] / mag_err[j]);
+        for (size_t j = 0; j < N_bins_; j++) chi2[i] += SQ(mag[j] / mag_err[j]);
         chi2r[i] = chi2[i] / (N_bins_real - 1);
         chi2_mag0[i] = data->mag_avg * (m0_best + 1);
         chi2_dmag[i] = dmag_best * chi2_mag0[i];
-        chi2_t0[i] = P * t_start_best / N_bins;
-        chi2_dt[i] = P * (dt_best + 1) / N_bins;
+        chi2_t0[i] = P * t_start_best / N_bins_;
+        chi2_dt[i] = P * (dt_best + 1) / N_bins_;
+        N_bins[i] = N_bins_;
     }
 
     if (verbose)
@@ -256,6 +258,7 @@ template <typename T> void BLSModel_FFA::process_results(std::vector<BLSResult<T
     chi2_dmag.assign(N_freq, 0);
     chi2_t0.assign(N_freq, 0);
     chi2_dt.assign(N_freq, 0);
+    N_bins.assign(N_freq, 0);
 
     for (size_t i = 0; i < N_freq; i++) {
         freq[i] = 1 / pres->P;
@@ -264,6 +267,7 @@ template <typename T> void BLSModel_FFA::process_results(std::vector<BLSResult<T
         chi2_dmag[i] = pres->dmag;
         chi2_t0[i] = fmod(rdata->rjd[0] + pres->P * (pres->t0 - 0.5) / pres->N_bins, pres->P);
         chi2_dt[i] = t_samp * pres->dur;
+        N_bins[i] = pres->N_bins;
         pres++;
     }
 }

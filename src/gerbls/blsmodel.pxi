@@ -26,6 +26,9 @@ cdef class pyBLSModel:
     
     def run(self, bool_t verbose = False):
         self.cPtr.run(verbose)
+
+    cdef size_t [::1] view_bins(self):
+        return <size_t [:self.N_freq]>self.cPtr.N_bins.data()
         
     cdef double [::1] view_dchi2(self):
         return <double [:self.N_freq]>self.cPtr.dchi2.data()
@@ -181,6 +184,7 @@ cdef class pyFastBLS(pyBLSModel):
         return t0.reshape((int(len(t0) / N_widths), N_widths))
 
 cdef class pyBLSAnalyzer:
+    cdef size_t [:] _bins
     cdef double [:] _dchi2
     cdef double [:] _dmag
     cdef double [:] _dur
@@ -192,6 +196,7 @@ cdef class pyBLSAnalyzer:
     cdef double t_samp
     
     def __cinit__(self, pyBLSModel model):
+        self._bins = model.view_bins()
         self._dchi2 = model.view_dchi2()
         self._dmag = model.view_dmag()
         self._dur = model.view_dur()
@@ -230,6 +235,10 @@ cdef class pyBLSAnalyzer:
     @property
     def mask(self):
         return np.asarray(self._mask)
+
+    @property
+    def N_bins(self):
+        return np.asarray(self._bins)
     
     @property
     def P(self):

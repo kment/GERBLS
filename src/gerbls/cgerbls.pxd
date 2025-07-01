@@ -20,6 +20,7 @@ cdef extern from "cpp/model.hpp":
         vector[double] chi2_t0
         vector[double] dchi2
         vector[double] freq
+        vector[size_t] N_bins
         
         size_t N_freq()
         void run(bool_t)
