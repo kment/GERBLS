@@ -297,7 +297,12 @@ cdef class pyBLSResult:
 
     @property
     def snr(self):
-        return ((-self.dchi2)**0.5 if self.dchi2 < 0 else -np.inf)
+        cdef bool_t[:] mask = self.get_transit_mask(phot.rjd)
+        cdef double err_in = np.sum(phot.err[mask]**-2)**-0.5
+        return self.dmag / err_in
+
+    def get_transit_mask(self, double[:] t):
+        return (abs((np.array(t) - self.t0 + self.P / 2) % self.P - self.P / 2) < self.dur / 2)
 
 cdef int convert_duration_mode(str duration_mode):
     """
