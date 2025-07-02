@@ -288,14 +288,18 @@ cdef class pyBLSResult:
     def __str__(self):
         return (
             f"pyBLSResult(P={self.P}, dchi2={self.dchi2}, mag0={self.mag0}, dmag={self.dmag}, "
-            f"t0={self.t0}, dur={self.dur}, snr={self.snr})"
+            f"t0={self.t0}, dur={self.dur}, snr={self.snr_from_dchi2})"
         )
     
     @property
     def r(self):
         return (self.dmag / self.mag0)**0.5
+    
+    @property
+    def snr_from_dchi2(self):
+        return ((-self.dchi2)**0.5 if self.dchi2 <= 0 else -np.inf)
 
-    def snr(self, pyDataContainer phot):
+    def get_SNR(self, pyDataContainer phot):
         cdef bool_t[:] mask = self.get_transit_mask(phot.rjd)
         cdef double err_in = np.sum(phot.err[mask]**-2)**-0.5
         return self.dmag / err_in
