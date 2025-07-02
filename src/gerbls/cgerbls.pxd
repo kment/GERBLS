@@ -20,10 +20,15 @@ cdef extern from "cpp/model.hpp":
         vector[double] chi2_t0
         vector[double] dchi2
         vector[double] freq
+        vector[size_t] N_bins
         
-        double get_max_duration(double)
         size_t N_freq()
         void run(bool_t)
+    
+    cdef cppclass BLSModel_bf(BLSModel):
+        BLSModel_bf(
+            DataContainer, double, double, Target*, double, double, size_t, int, double, double)
+        BLSModel_bf(DataContainer, vector[double], Target*, double, size_t, int, double, double)
     
     cdef cppclass BLSModel_FFA(BLSModel):
         double t_samp
@@ -34,7 +39,7 @@ cdef extern from "cpp/model.hpp":
         vector[size_t] foldbins
         vector[double] snr
         vector[size_t] t0
-        BLSModel_FFA(DataContainer, double, double, Target*, int, double)
+        BLSModel_FFA(DataContainer, double, double, Target*, int, double, double)
         
         void run_double(bool_t)
 

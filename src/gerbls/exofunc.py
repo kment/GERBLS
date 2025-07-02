@@ -2,6 +2,8 @@ import numpy as np
 
 # Divide x into chunks with gaps longer than x_gap
 # Returns a list of index pairs (i, j) such that x[i:j] are the chunks
+
+
 def divide_into_chunks(x, x_gap):
 
     i_breaks = np.where(np.diff(x) > x_gap)[0]

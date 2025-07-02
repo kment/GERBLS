@@ -2,8 +2,9 @@ import gerbls
 import numpy as np
 import numpy.typing as npt
 
-def run_bls(time: npt.ArrayLike, 
-            mag: npt.ArrayLike, 
+
+def run_bls(time: npt.ArrayLike,
+            mag: npt.ArrayLike,
             err: npt.ArrayLike,
             min_period: float,
             max_period: float,
@@ -34,7 +35,7 @@ def run_bls(time: npt.ArrayLike,
         Determines how the maximum tested transit duration is calculated at each period.
         If 'constant', the maximum duration is set to max_duration_factor.
         If 'fractional', the tested orbital period is multiplied by max_duration_factor.
-        If 'physical', the expected transit duration for a circular orbit is multiplied by 
+        If 'physical', the expected transit duration for a circular orbit is multiplied by
         max_duration_factor.
     max_duration_factor : float, optional
         A scaling factor that affects the maximum tested transit duration.
@@ -51,11 +52,6 @@ def run_bls(time: npt.ArrayLike,
         `dmag` is the best-fit transit depth at each period
     """
 
-    # Check arguments for validity
-    allowed_duration_modes = {'constant': 1, 'fractional': 2, 'physical': 3}
-    assert max_duration_mode in allowed_duration_modes, \
-        f"max_duration_mode must be one of: {allowed_duration_modes.keys()}"
-
     # Make sure the data is time-sorted and formatted as Numpy arrays
     if np.all(np.diff(time) >= 0):
         time = np.array(time)
@@ -66,23 +62,22 @@ def run_bls(time: npt.ArrayLike,
         time = np.array(time)[order]
         mag = np.array(mag)[order]
         err = np.array(err)[order]
-    
+
     # Create a GERBLS data container
     phot = gerbls.pyDataContainer()
     phot.store(time, mag, err, convert_to_flux=False)
 
     # Set up and run the BLS
     bls = gerbls.pyFastBLS()
-    bls.create(phot, min_period, max_period, t_samp, 
-               max_duration_mode=allowed_duration_modes[max_duration_mode],
-               max_duration_factor=max_duration_factor)
+    bls.setup(phot, min_period, max_period, t_samp=t_samp,
+              duration_mode=max_duration_mode, max_duration_factor=max_duration_factor)
     bls.run(verbose=True)
 
     # Return the BLS spectrum
     blsa = gerbls.pyBLSAnalyzer(bls)
-    return {'P': blsa.P,
-            'dchi2': -blsa.dchi2,
-            't0': blsa.t0,
-            'dur': blsa.dur,
-            'mag0': blsa.mag0,
-            'dmag': blsa.dmag}
+    return {'P': np.copy(blsa.P),
+            'dchi2': np.copy(-blsa.dchi2),
+            't0': np.copy(blsa.t0),
+            'dur': np.copy(blsa.dur),
+            'mag0': np.copy(blsa.mag0),
+            'dmag': np.copy(blsa.dmag)}
