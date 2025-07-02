@@ -295,7 +295,6 @@ cdef class pyBLSResult:
     def r(self):
         return (self.dmag / self.mag0)**0.5
 
-    @property
     def snr(self, pyDataContainer phot):
         cdef bool_t[:] mask = self.get_transit_mask(phot.rjd)
         cdef double err_in = np.sum(phot.err[mask]**-2)**-0.5
