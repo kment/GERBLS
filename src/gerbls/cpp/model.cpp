@@ -265,7 +265,7 @@ template <typename T> void BLSModel_FFA::process_results(std::vector<BLSResult<T
         dchi2[i] = -(pres->dchi2);
         chi2_mag0[i] = pres->mag0;
         chi2_dmag[i] = pres->dmag;
-        chi2_t0[i] = fmod(rdata->rjd[0] + pres->P * (pres->t0 - 0.5) / pres->N_bins, pres->P);
+        chi2_t0[i] = fmod(rdata->rjd[0] + t_samp * (pres->t0 - 0.5), pres->P);
         chi2_dt[i] = t_samp * pres->dur;
         N_bins[i] = pres->N_bins;
         pres++;

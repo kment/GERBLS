@@ -1,5 +1,5 @@
 # GERBLS version
-__version__ = "0.6.5"
+__version__ = "0.6.6"
 
 # Compiled Cython library
 from _gerbls import *
