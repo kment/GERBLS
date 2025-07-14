@@ -246,6 +246,33 @@ void BLSModel_bf::run(bool verbose)
         std::cout << "BLS     NFREQ: " << N_freq() << "     STATUS: 100%\n";
 }
 
+// Constructor
+// If any numeric value is 0 then the default value is used
+BLSModel_FFA::BLSModel_FFA(DataContainer &data_ref,
+                           double f_min,
+                           double f_max,
+                           const Target *targetPtr,
+                           int duration_mode,
+                           double min_duration_factor,
+                           double max_duration_factor,
+                           double t_samp,
+                           bool downsample,
+                           double downsample_factor,
+                           size_t N_bins_transit_min) :
+    BLSModel(
+        data_ref, f_min, f_max, targetPtr, duration_mode, min_duration_factor, max_duration_factor)
+{
+    // Override numeric values if given
+    if (t_samp > 0)
+        this->t_samp = t_samp;
+    if (downsample_factor > 0)
+        this->downsample_factor = downsample_factor;
+    if (N_bins_transit_min > 0)
+        this->N_bins_transit_min = N_bins_transit_min;
+
+    this->downsample = downsample;
+}
+
 // Generate required results
 template <typename T> void BLSModel_FFA::process_results(std::vector<BLSResult<T>> &results)
 {
@@ -259,6 +286,7 @@ template <typename T> void BLSModel_FFA::process_results(std::vector<BLSResult<T
     chi2_t0.assign(N_freq, 0);
     chi2_dt.assign(N_freq, 0);
     N_bins.assign(N_freq, 0);
+    time_spent.assign(N_freq, 0);
 
     for (size_t i = 0; i < N_freq; i++) {
         freq[i] = 1 / pres->P;
@@ -268,6 +296,7 @@ template <typename T> void BLSModel_FFA::process_results(std::vector<BLSResult<T
         chi2_t0[i] = fmod(rdata->rjd[0] + t_samp * (pres->t0 - 0.5), pres->P);
         chi2_dt[i] = t_samp * pres->dur;
         N_bins[i] = pres->N_bins;
+        time_spent[i] = pres->time_spent;
         pres++;
     }
 }
@@ -312,8 +341,15 @@ template <typename T> void BLSModel_FFA::run_prec(bool verbose)
         std::bind(&BLSModel::get_duration_limits, this, std::placeholders::_1);
 
     auto t_start = std::chrono::high_resolution_clock::now();
-    std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(
-        mag.data(), wts.data(), mag.size(), t_samp, get_duration_limits_, 1 / f_max, 1 / f_min));
+    std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(mag.data(),
+                                                               wts.data(),
+                                                               mag.size(),
+                                                               t_samp,
+                                                               get_duration_limits_,
+                                                               1 / f_max,
+                                                               1 / f_min,
+                                                               downsample,
+                                                               downsample_factor));
     auto t_end = std::chrono::high_resolution_clock::now();
 
     if (verbose) {

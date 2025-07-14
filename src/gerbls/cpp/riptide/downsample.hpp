@@ -1,6 +1,7 @@
 /*
     This code originates from the riptide package - see LICENSE.
     Copyright (c) 2017-2021 Vincent Morello
+    Minor modifications by Kristo Ment (6/30/25).
 */
 
 #ifndef DOWNSAMPLE_HPP
@@ -46,7 +47,8 @@ double downsampled_variance(size_t num_samples, double f)
 /* 
 Downsample input array by a real-valued factor. Output must have capacity for floor((size - 1.0) / f) elements
 */
-void downsample(const float* __restrict__ in, size_t size, double f, float* __restrict__ out)
+template <typename T>
+void downsample(const T* __restrict__ in, size_t size, double f, T* __restrict__ out)
     {
     check_downsampling_factor(size, f);
 

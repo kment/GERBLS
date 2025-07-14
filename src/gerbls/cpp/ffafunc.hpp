@@ -20,6 +20,7 @@ template <typename T> struct BLSResult {
     T dmag;
     T dchi2;
     size_t N_bins;
+    double time_spent;
 };
 
 template <typename T>
@@ -57,9 +58,16 @@ std::vector<BLSResult<T>>
                 // const std::vector<size_t>& widths,
                 std::function<std::tuple<double, double>(double)> get_max_duration,
                 double period_min,
-                double period_max);
+                double period_max,
+                bool downsample = false,
+                double downsampling_factor = 1.2);
 
-size_t periodogram_length(size_t size, double tsamp, double period_min, double period_max);
+size_t periodogram_length(size_t size,
+                          double tsamp,
+                          double period_min,
+                          double period_max,
+                          bool downsample,
+                          double downsampling_factor);
 
 // Resample the light curve with a uniform sampling interval
 std::unique_ptr<DataContainer> resample_uniform(const DataContainer &data, double tsamp);

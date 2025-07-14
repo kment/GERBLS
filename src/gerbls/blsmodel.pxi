@@ -24,7 +24,7 @@ cdef class pyBLSModel:
     def N_freq(self):
         return self.cPtr.N_freq()
     
-    def run(self, bool_t verbose = False):
+    def run(self, bool_t verbose = True):
         self.cPtr.run(verbose)
 
     cdef size_t [::1] view_bins(self):
@@ -145,24 +145,27 @@ cdef class pyFastBLS(pyBLSModel):
               bool_t verbose = True,
               str duration_mode = "",
               double min_duration_factor = 0.,
-              double max_duration_factor = 0.):
+              double max_duration_factor = 0.,
+              bool_t downsample = False,
+              double downsample_factor = 1.1):
         cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        if t_samp == 0:
+            t_samp = np.median(np.diff(data.rjd))
+            if verbose:
+                print(
+                    f"BLS time sampling set to the median cadence of input data: "
+                    f"{t_samp*24*60:.2f} minutes.",
+                    flush=True)
         self.dPtr = new BLSModel_FFA(data.cPtr[0],
                                      1./max_period,
                                      1./min_period,
                                      targetPtr,
                                      convert_duration_mode(duration_mode),
                                      min_duration_factor,
-                                     max_duration_factor)
-        if t_samp > 0:
-            self.t_samp = t_samp
-        else:
-            self.t_samp = np.median(np.diff(data.rjd))
-            if verbose:
-                print(
-                    f"BLS time sampling set to the median cadence of input data: "
-                    f"{self.t_samp*24*60:.2f} minutes.",
-                    flush=True)
+                                     max_duration_factor,
+                                     t_samp,
+                                     downsample,
+                                     downsample_factor)
         self.cPtr = self.dPtr
         self.alloc = True
     
@@ -182,6 +185,10 @@ cdef class pyFastBLS(pyBLSModel):
         t0 = np.asarray(<size_t [:self.dPtr.t0.size()]>self.dPtr.t0.data())
         N_widths = self.dPtr.widths.size()
         return t0.reshape((int(len(t0) / N_widths), N_widths))
+    
+    @property
+    def time_spent(self):
+        return np.asarray(<double [:self.dPtr.time_spent.size()]>self.dPtr.time_spent.data())
 
 cdef class pyBLSAnalyzer:
     cdef size_t [:] _bins
