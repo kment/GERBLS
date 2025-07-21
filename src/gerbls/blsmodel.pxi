@@ -147,7 +147,8 @@ cdef class pyFastBLS(pyBLSModel):
               double min_duration_factor = 0.,
               double max_duration_factor = 0.,
               bool_t downsample = False,
-              double downsample_factor = 1.1):
+              double downsample_invpower = 3.,
+              double downsample_threshold = 1.1):
         cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
         if t_samp == 0:
             t_samp = np.median(np.diff(data.rjd))
@@ -165,7 +166,8 @@ cdef class pyFastBLS(pyBLSModel):
                                      max_duration_factor,
                                      t_samp,
                                      downsample,
-                                     downsample_factor)
+                                     downsample_invpower,
+                                     downsample_threshold)
         self.cPtr = self.dPtr
         self.alloc = True
     

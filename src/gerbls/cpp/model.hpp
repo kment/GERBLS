@@ -101,7 +101,8 @@ struct BLSModel_FFA : public BLSModel {
 
     // Settings
     bool downsample = false;        // Automatic downsampling for shorter periods
-    double downsample_factor = 1.1; // Downsample when the max transit duration
+    double ds_invpower = 3.;
+    double ds_threshold = 1.1;      // Downsample when the max transit duration
                                     // drops by this fraction
     size_t N_bins_transit_min = 1;  // Minimum number of bins per transit
     double t_samp = 2. / 60 / 24;   // Uniform cadence to resample data to
@@ -127,7 +128,8 @@ struct BLSModel_FFA : public BLSModel {
                  double max_duration_factor = 0.,
                  double t_samp = 0.,
                  bool downsample = false,
-                 double downsample_factor = 0.,
+                 double ds_invpower = 0.,
+                 double ds_threshold = 0.,
                  size_t N_bins_transit_min = 0);
 
     // Methods

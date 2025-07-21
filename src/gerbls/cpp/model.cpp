@@ -257,7 +257,8 @@ BLSModel_FFA::BLSModel_FFA(DataContainer &data_ref,
                            double max_duration_factor,
                            double t_samp,
                            bool downsample,
-                           double downsample_factor,
+                           double ds_invpower,
+                           double ds_threshold,
                            size_t N_bins_transit_min) :
     BLSModel(
         data_ref, f_min, f_max, targetPtr, duration_mode, min_duration_factor, max_duration_factor)
@@ -265,8 +266,10 @@ BLSModel_FFA::BLSModel_FFA(DataContainer &data_ref,
     // Override numeric values if given
     if (t_samp > 0)
         this->t_samp = t_samp;
-    if (downsample_factor > 0)
-        this->downsample_factor = downsample_factor;
+    if (ds_invpower > 0)
+        this->ds_invpower = ds_invpower;
+    if (ds_threshold > 0)
+        this->ds_threshold = ds_threshold;
     if (N_bins_transit_min > 0)
         this->N_bins_transit_min = N_bins_transit_min;
 
@@ -324,7 +327,7 @@ template <typename T> void BLSModel_FFA::run_prec(bool verbose)
     for (size_t i = 0; i < rdata->size; i++) {
         if (rdata->valid_mask[i]) {
             mag[i] = rdata->mag[i];
-            wts[i] = 1 / rdata->err[i] / rdata->err[i];
+            wts[i] = 1. / rdata->err[i] / rdata->err[i];
         }
     }
 
@@ -346,10 +349,12 @@ template <typename T> void BLSModel_FFA::run_prec(bool verbose)
                                                                mag.size(),
                                                                t_samp,
                                                                get_duration_limits_,
-                                                               1 / f_max,
-                                                               1 / f_min,
+                                                               1. / f_max,
+                                                               1. / f_min,
                                                                downsample,
-                                                               downsample_factor));
+                                                               ds_invpower,
+                                                               ds_threshold,
+                                                               verbose));
     auto t_end = std::chrono::high_resolution_clock::now();
 
     if (verbose) {

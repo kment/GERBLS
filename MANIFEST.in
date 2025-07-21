@@ -1,2 +1,5 @@
 global-include *.pyx *.pxd *.pxi
 graft src/gerbls/cpp/riptide
+
+# Include configuration and data files for tests
+#include tests/*.dat tests/*.py

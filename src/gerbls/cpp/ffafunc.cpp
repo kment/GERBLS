@@ -116,32 +116,44 @@ std::vector<BLSResult<T>>
                 double period_min,
                 double period_max,
                 bool downsample,
-                double downsampling_factor)
+                double ds_invpower,
+                double ds_threshold,
+                bool verbose)
 {
     // periodogram_check_arguments(size, tsamp, period_min, period_max, bins_min, bins_max);
 
     // Temporary variables
     double min_width_P, max_width_P;
+    size_t bstart, bstop;
     T *wprod_, *weights_;
 
     // Maximum possible size of the data
     const size_t n_max = size + (size_t)(period_max / tsamp);
 
     // Calculate periodogram length and allocate memory for output
-    const size_t length =
-        periodogram_length(size, tsamp, period_min, period_max, downsample, downsampling_factor);
+    const size_t length = periodogram_length(
+        size, tsamp, period_min, period_max, downsample, ds_invpower, ds_threshold);
     std::vector<BLSResult<T>> results(length);
     BLSResult<T> *presult = results.data();
 
-    // Geometric growth factor for the downsampling factor
-    double ds_geo = downsampling_factor;
+    // Geometric growth factor for the downsampling parameter
+    double ds_geo = ds_threshold;
 
     // Minimum and maximum number of bins in each downsampling loop iteration
     size_t bins_min = period_min / tsamp;
-    size_t bins_max = downsample ? bins_min * downsampling_factor + 1 : period_max / tsamp;
+    // size_t bins_max = downsample ? bins_min * ds_threshold + 1 : period_max / tsamp;
 
     // Number of required downsampling cycles
-    size_t num_downsamplings = downsample ? ceil(log(period_max / period_min) / log(ds_geo)) : 1;
+    const size_t num_downsamplings =
+        downsample ? ceil(log(period_max / period_min) / log(ds_geo) / ds_invpower) : 1;
+
+    if (verbose) {
+        if (downsample)
+            std::cout << "Downsampling: ON     Number of downsamplings: " << num_downsamplings
+                      << "\n";
+        else
+            std::cout << "Downsampling: OFF\n";
+    }
 
     // Allocate buffers
     const size_t bufsize = n_max;
@@ -179,7 +191,7 @@ std::vector<BLSResult<T>>
 
         const double f = pow(ds_geo, ids); // current downsampling factor
         const double tau = f * tsamp;      // current sampling time
-        const size_t period_max_samples = period_max / tau;
+        const double period_max_samples = period_max / tau;
         const size_t n = riptide::downsampled_size(size, f); // current number of real input samples
         const size_t n_padded = n + period_max_samples;      // number of samples after zero-padding
 
@@ -205,8 +217,14 @@ std::vector<BLSResult<T>>
 
         // Min and max number of bins with which to FFA transform
         // NOTE: bstop is INclusive
-        const size_t bstart = bins_min;
-        const size_t bstop = std::min(bins_max, period_max_samples);
+        if (downsample) {
+            bstart = bins_min * pow(ds_threshold, (ds_invpower - 1) * ids);
+            bstop = std::min(bstart * pow(ds_threshold, ds_invpower), period_max_samples);
+        }
+        else {
+            bstart = bins_min;
+            bstop = period_max_samples;
+        }
 
         /* FFA transform loop */
         for (size_t bins = bstart; bins <= bstop; ++bins) {
@@ -214,7 +232,7 @@ std::vector<BLSResult<T>>
             auto t_start = std::chrono::high_resolution_clock::now();
 
             const size_t rows = n_padded / bins;
-            const double period_ceil = std::min(period_max_samples, bins + 1);
+            const double period_ceil = std::min(period_max_samples, bins + 1.);
             const size_t rows_eval = std::min(rows, riptide::ceilshift(rows, bins, period_ceil));
             std::tie(min_width_P, max_width_P) = get_duration_limits((bins + 1) * tau);
             const size_t min_width = std::max((size_t)(1), (size_t)(min_width_P / tau));
@@ -255,7 +273,9 @@ template std::vector<BLSResult<float>>
                 double,
                 double,
                 bool,
-                double);
+                double,
+                double,
+                bool);
 template std::vector<BLSResult<double>>
     periodogram(const double *__restrict__,
                 const double *__restrict__,
@@ -265,7 +285,9 @@ template std::vector<BLSResult<double>>
                 double,
                 double,
                 bool,
-                double);
+                double,
+                double,
+                bool);
 
 /*
 Returns the total number of trial periods in a periodogram
@@ -275,19 +297,23 @@ size_t periodogram_length(size_t size,
                           double period_min,
                           double period_max,
                           bool downsample,
-                          double downsampling_factor)
+                          double ds_invpower,
+                          double ds_threshold)
 {
     // periodogram_check_arguments(size, tsamp, period_min, period_max, bins_min, bins_max);
 
+    size_t bstart, bstop;
+
     // Geometric growth factor for the downsampling factor
-    double ds_geo = downsampling_factor;
+    double ds_geo = ds_threshold;
 
     // Minimum and maximum number of bins in each downsampling loop iteration
     size_t bins_min = period_min / tsamp;
-    size_t bins_max = downsample ? bins_min * downsampling_factor + 1 : period_max / tsamp;
+    // size_t bins_max = downsample ? bins_min * ds_threshold + 1 : period_max / tsamp;
 
     // Number of required downsampling cycles
-    size_t num_downsamplings = downsample ? ceil(log(period_max / period_min) / log(ds_geo)) : 1;
+    const size_t num_downsamplings =
+        downsample ? ceil(log(period_max / period_min) / log(ds_geo) / ds_invpower) : 1;
     size_t length = 0; // total number of period trials, to be calculated
 
     /* Downsampling loop */
@@ -295,17 +321,23 @@ size_t periodogram_length(size_t size,
 
         const double f = pow(ds_geo, ids); // current downsampling factor
         const double tau = f * tsamp;      // current sampling time
-        const size_t period_max_samples = period_max / tau;
+        const double period_max_samples = period_max / tau;
         const size_t n = riptide::downsampled_size(size, f); // current number of real input samples
         const size_t n_padded = n + period_max_samples;      // number of samples after zero-padding
 
-        const size_t bstart = bins_min;
-        const size_t bstop = std::min(bins_max, period_max_samples);
+        if (downsample) {
+            bstart = bins_min * pow(ds_threshold, (ds_invpower - 1) * ids);
+            bstop = std::min(bstart * pow(ds_threshold, ds_invpower), period_max_samples);
+        }
+        else {
+            bstart = bins_min;
+            bstop = period_max_samples;
+        }
 
         /* FFA transform loop */
         for (size_t bins = bstart; bins <= bstop; ++bins) {
             const size_t rows = n_padded / bins;
-            const double period_ceil = std::min(period_max_samples, bins + 1);
+            const double period_ceil = std::min(period_max_samples, bins + 1.);
             const size_t rows_eval = std::min(rows, riptide::ceilshift(rows, bins, period_ceil));
             length += rows_eval;
         }

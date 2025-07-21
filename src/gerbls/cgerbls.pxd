@@ -41,7 +41,7 @@ cdef extern from "cpp/model.hpp":
         vector[size_t] t0
         vector[double] time_spent
         BLSModel_FFA(
-            DataContainer, double, double, Target*, int, double, double, double, bool_t, double)
+            DataContainer, double, double, Target*, int, double, double, double, bool_t, double, double)
         
         void run_double(bool_t)
 

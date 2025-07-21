@@ -60,14 +60,17 @@ std::vector<BLSResult<T>>
                 double period_min,
                 double period_max,
                 bool downsample = false,
-                double downsampling_factor = 1.2);
+                double ds_invpower = 3.0,
+                double ds_threshold = 1.2,
+                bool verbose = true);
 
 size_t periodogram_length(size_t size,
                           double tsamp,
                           double period_min,
                           double period_max,
                           bool downsample,
-                          double downsampling_factor);
+                          double ds_invpower,
+                          double ds_threshold);
 
 // Resample the light curve with a uniform sampling interval
 std::unique_ptr<DataContainer> resample_uniform(const DataContainer &data, double tsamp);
