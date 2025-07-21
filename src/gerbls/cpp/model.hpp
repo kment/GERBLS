@@ -110,12 +110,7 @@ struct BLSModel_FFA : public BLSModel {
     // Pointer to the resampled data
     std::unique_ptr<DataContainer> rdata;
 
-    // TEMPORARY FFA results
-    std::vector<double> periods;
-    std::vector<size_t> widths;
-    std::vector<size_t> foldbins;
-    std::vector<double> snr;
-    std::vector<size_t> t0;
+    // Time spent evaluating dchi2 at each tested period
     std::vector<double> time_spent;
 
     // Constructor and destructor

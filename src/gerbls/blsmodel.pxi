@@ -116,20 +116,6 @@ cdef class pyFastBLS(pyBLSModel):
             del self.dPtr
     
     @property
-    def dchi2(self):
-        snr = np.asarray(<double [:self.dPtr.snr.size()]>self.dPtr.snr.data())
-        N_widths = self.dPtr.widths.size()
-        return snr.reshape((int(len(snr) / N_widths), N_widths))
-    
-    @property
-    def foldbins(self):
-        return np.asarray(<size_t [:self.dPtr.foldbins.size()]>self.dPtr.foldbins.data())
-    
-    @property
-    def periods(self):
-        return np.asarray(<double [:self.dPtr.periods.size()]>self.dPtr.periods.data())
-    
-    @property
     def rdata(self):
         return pyDataContainer.from_ptr(self.dPtr.rdata.get(), False)
     
@@ -177,16 +163,6 @@ cdef class pyFastBLS(pyBLSModel):
     @t_samp.setter
     def t_samp(self, double value):
         self.dPtr.t_samp = value
-        
-    @property
-    def t_widths(self):
-        return np.asarray(<size_t [:self.dPtr.widths.size()]>self.dPtr.widths.data())
-    
-    @property
-    def t0(self):
-        t0 = np.asarray(<size_t [:self.dPtr.t0.size()]>self.dPtr.t0.data())
-        N_widths = self.dPtr.widths.size()
-        return t0.reshape((int(len(t0) / N_widths), N_widths))
     
     @property
     def time_spent(self):

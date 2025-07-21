@@ -331,14 +331,6 @@ template <typename T> void BLSModel_FFA::run_prec(bool verbose)
         }
     }
 
-    /*size_t length = periodogram_length(mag.size(), t_samp, 1/f_max, 1/f_min);
-    if (verbose)
-        std::cout << "Number of tested periods: " << length << "\n";
-    freq.assign(length, 0);
-    foldbins.assign(length, 0);
-    dchi2.assign(length, 0);
-    chi2_t0.assign(length, 0);*/
-
     // Function wrapper to return the maximum tested transit duration at each period
     auto get_duration_limits_ =
         std::bind(&BLSModel::get_duration_limits, this, std::placeholders::_1);
