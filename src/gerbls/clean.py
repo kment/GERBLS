@@ -1,8 +1,13 @@
 import gerbls
 import numpy as np
 from .exofunc import divide_into_chunks
-from scipy.signal import savgol_filter
 from typing import Union
+
+try:
+    from scipy.signal import savgol_filter
+    _HAS_SCIPY = True
+except ImportError:
+    _HAS_SCIPY = False
 
 
 def clean_savgol(phot: gerbls.pyDataContainer,
@@ -39,6 +44,9 @@ def clean_savgol(phot: gerbls.pyDataContainer,
     np.array
         Mask corresponding to valid cleaned data.
     """
+    # Check optional dependencies
+    if not _HAS_SCIPY:
+        gerbls.raise_import_error("gerbls.clean_savgol", "scipy.signal.savgol_filter")
 
     # Mask corresponding to valid cleaned data
     cmask = np.ones(phot.size, dtype=bool)

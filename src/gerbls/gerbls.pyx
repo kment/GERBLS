@@ -255,6 +255,12 @@ cdef class pyTarget:
     def Teff(self):
         return self.cPtr.Teff()
 
+# General function to raise an ImportError about a missing dependency
+def raise_import_error(str source_function, str missing_dep):
+    raise ImportError(
+        f"{source_function} requires {missing_dep}, which is an optional dependency. Please check "
+        f"that {missing_dep.split('.')[0]} has been properly installed.")
+
 def resample(pyDataContainer data, double t_samp):
     out = pyDataContainer.from_ptr(resample_uniform(data.cPtr[0], t_samp).release(), True)
     return out

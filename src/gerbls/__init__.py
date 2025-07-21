@@ -8,7 +8,4 @@ from _gerbls import *
 from .blsfunc import run_bls
 
 # Optional extras
-try:
-    from .clean import clean_savgol
-except ImportError:
-    pass
+from .clean import clean_savgol
