@@ -63,16 +63,16 @@ struct DataContainer {
 size_t file_count_lines(std::string filename, const std::vector<int> *sectors = nullptr);
 
 // Structure to keep information about the star
-// Uses MRL values for LHS 1140 by default
+// Uses Solar values by default
 struct Target {
-    double M = 0.179;   // Mass in Msun
-    double R = 0.209;   // Radius in Run
-    double L = 0.00433; // Luminosity in Lsun
-    double u1 = 0;      // Limb darkening coefficients
-    double u2 = 0;
-    double L_comp = 0; // Luminosity of binary companion as a fraction of L
-    double P_rot = 0;  // Rotation period
-    double P_rot2 = 0; // Second rotation period (binary companion)
+    double M = 1.;   // Mass in Msun
+    double R = 1.;   // Radius in Run
+    double L = 1.; // Luminosity in Lsun
+    double u1 = 0.;      // Limb darkening coefficients
+    double u2 = 0.;
+    double L_comp = 0.; // Luminosity of binary companion as a fraction of L
+    double P_rot = 0.;  // Rotation period
+    double P_rot2 = 0.; // Second rotation period (binary companion)
 
     double logg();
     double Teff();

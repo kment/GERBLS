@@ -1,5 +1,5 @@
 # GERBLS version
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 
 # Compiled Cython library
 from _gerbls import *
@@ -9,3 +9,4 @@ from .blsfunc import run_bls
 
 # Optional extras
 from .clean import clean_savgol
+from .trmodel import LDModel

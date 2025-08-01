@@ -1,5 +1,6 @@
 # cython: language_level = 3
 # BLS model and analyzer to be included in gerbls.pyx
+# See gerbls.pyx for module imports
 
 cdef class pyBLSModel:
     cdef BLSModel* cPtr
@@ -283,11 +284,15 @@ cdef class pyBLSResult:
     @property
     def snr_from_dchi2(self):
         return ((-self.dchi2)**0.5 if self.dchi2 <= 0 else -np.inf)
-
-    def get_SNR(self, pyDataContainer phot):
+    
+    def get_dmag_err(self, pyDataContainer phot):
         cdef bool_t[:] mask = self.get_transit_mask(phot.rjd)
         cdef double err_in = np.sum(phot.err[mask]**-2)**-0.5
-        return self.dmag / err_in
+        cdef double err_out = np.sum(phot.err[invert_mask(mask)]**-2)**-0.5
+        return (err_in**2 + err_out**2)**0.5
+
+    def get_SNR(self, pyDataContainer phot):
+        return self.dmag / self.get_dmag_err(phot)
 
     def get_transit_mask(self, double[:] t):
         return (abs((np.array(t) - self.t0 + self.P / 2) % self.P - self.P / 2) < self.dur / 2)
