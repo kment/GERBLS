@@ -10,6 +10,10 @@ project = 'GERBLS'
 copyright = '2025, Kristo Ment'
 author = 'Kristo Ment'
 
+import os
+import sys
+sys.path.insert(0, os.path.abspath("../../src"))
+
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
