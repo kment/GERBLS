@@ -9,7 +9,8 @@ def run_bls(time: npt.ArrayLike,
             min_period: float,
             max_period: float,
             t_samp: float = 0.,
-            max_duration_mode: str = 'fractional',
+            duration_mode: str = 'fractional',
+            min_duration_factor: float = 0.,
             max_duration_factor: float = 0.2):
     """
     A basic convenience function to generate a BLS spectrum.
@@ -31,12 +32,14 @@ def run_bls(time: npt.ArrayLike,
     t_samp : float, optional
         Time sampling to bin the data before running the BLS.
         If 0 (default), the median time difference between observations is used.
-    max_duration_mode : str, optional
-        Determines how the maximum tested transit duration is calculated at each period.
+    duration_mode : str, optional
+        Determines how the tested transit durations are calculated at each period.
         If 'constant', the maximum duration is set to max_duration_factor.
         If 'fractional', the tested orbital period is multiplied by max_duration_factor.
         If 'physical', the expected transit duration for a circular orbit is multiplied by
         max_duration_factor.
+    min_duration_factor : float, optional
+        A scaling factor that affects the minimum tested transit duration.
     max_duration_factor : float, optional
         A scaling factor that affects the maximum tested transit duration.
 
@@ -69,8 +72,13 @@ def run_bls(time: npt.ArrayLike,
 
     # Set up and run the BLS
     bls = gerbls.pyFastBLS()
-    bls.setup(phot, min_period, max_period, t_samp=t_samp,
-              duration_mode=max_duration_mode, max_duration_factor=max_duration_factor)
+    bls.setup(phot,
+              min_period,
+              max_period,
+              t_samp=t_samp,
+              duration_mode=duration_mode,
+              min_duration_factor=min_duration_factor,
+              max_duration_factor=max_duration_factor)
     bls.run(verbose=True)
 
     # Return the BLS spectrum
