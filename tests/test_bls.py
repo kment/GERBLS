@@ -43,7 +43,7 @@ def test_bls_bf(phot_test):
 
 def test_bls_fast(phot_test):
     """
-    Test for the fast-folded BLS.
+    Test for the fast-folded BLS and limb darkening fitting.
     """
 
     correct_P = 1.37
@@ -57,3 +57,9 @@ def test_bls_fast(phot_test):
 
     best_model = blsa.generate_models(1)[0]
     assert abs(best_model.P - correct_P) < 0.001
+
+    ldmodel = gerbls.LDModel.from_BLS(best_model)
+    ldmodel.fit(phot_test, u_fixed=False)
+    assert abs(ldmodel.P - correct_P) < 0.001
+    assert ldmodel.target.u1 != 0
+    assert ldmodel.dchi2 > 1000
