@@ -18,7 +18,10 @@ except ImportError:
 
 
 class TransitModel:
-    
+    """
+    Transit model base class. Should not be created directly.
+    """
+
     def __init__(self):
 
         # Parameters related to fitting
@@ -26,18 +29,50 @@ class TransitModel:
         self.chi2_const = 0.
         self.chi2r = 0.
         self.dchi2 = 0.
-    
+
     @property
-    def fitted(self):
+    def fitted(self) -> bool:
+        """
+        Indicates whether a transit model fit has been run.
+        """
         return (self.chi2 != 0)
-    
+
     @staticmethod
-    def get_chi2_const(phot: gerbls.pyDataContainer):
+    def get_chi2_const(phot: gerbls.pyDataContainer) -> float:
+        """
+        Calculate the chi-squared parameter of a constant-flux fit to the data (no transit).
+
+        Parameters
+        ----------
+        phot : gerbls.pyDataContainer
+            Input data.
+        """
         mag0_fit = np.average(phot.mag, weights=phot.err**-2)
         return np.sum(((phot.mag - mag0_fit) / phot.err)**2)
 
 
 class LDModel(TransitModel):
+    """
+    Transit model with quadratic limb darkening.
+    The parameters below are stored as public properties; for example, ``LDModel.b`` retrieves the
+    currently stored impact parameter value.
+    Use ``print(LDModel)`` for an overview of all stored parameters.
+
+    Parameters
+    ----------
+    b : float, optional
+        Impact parameter, by default 0.
+    mag0 : float, optional
+        Out-of-transit flux, by default 1.
+    P : float, optional
+        Orbital period, by default 0.
+    r : float, optional
+        Planet-to-star radius ratio, by default 0.
+    t0 : float, optional
+        Time of mid-transit, by default 0.
+    target : Optional[gerbls.pyTarget], optional
+        Data structure containing stellar parameters, by default None
+    """
 
     def __init__(self,
                  b: float = 0.,
@@ -46,7 +81,7 @@ class LDModel(TransitModel):
                  r: float = 0.,
                  t0: float = 0.,
                  target: Optional[gerbls.pyTarget] = None):
-        
+
         super().__init__()
 
         self.b = b
@@ -66,7 +101,7 @@ class LDModel(TransitModel):
         self.t0_err = 0.
         self.target_u1_err = 0.
         self.target_u2_err = 0.
-    
+
     def __str__(self):
         return (
             f"{self.__class__.__name__} with the following orbital parameters:\n" +
@@ -85,7 +120,7 @@ class LDModel(TransitModel):
             f" chi2 =   {self.chi2:.4f} (reduced: {self.chi2r:.4f})\n"
             f"dchi2 =   {self.dchi2:.4f}"
         )
-    
+
     def _get_batman_TransitParams(self):
         params = batman.TransitParams()
         params.t0 = self.t0
@@ -100,11 +135,22 @@ class LDModel(TransitModel):
         return params
 
     @property
-    def dur(self):
+    def dur(self) -> float:
+        """
+        Calculated transit duration. ``self.target`` must be set.
+        """
         return self.target.get_transit_duration(self.P, self.b)
 
     # Return a limb-darkened light curve evaluated at a given array of times
-    def eval(self, time: npt.ArrayLike):
+    def eval(self, time: npt.ArrayLike) -> np.ndarray:
+        """
+        Evaluate the model flux at a given array of input times.
+
+        Parameters
+        ----------
+        time : npt.ArrayLike
+            Input times.
+        """
 
         if not _HAS_BATMAN:
             gerbls.raise_import_error("LDModel.eval", "batman")
@@ -112,7 +158,29 @@ class LDModel(TransitModel):
         params = self._get_batman_TransitParams()
         return batman.TransitModel(params, np.asarray(time)).light_curve(params)
 
-    def fit(self, phot: gerbls.pyDataContainer, u_fixed: bool = False):
+    def fit(self, phot: gerbls.pyDataContainer, u_fixed: bool = False) -> None:
+        """
+        Fit a limb-darkened model to the data.
+        Currently stored parameter values are used as initial guesses for the solution.
+        The fitting is done using ``scipy.optimize.curve_fit``.
+
+        Parameters
+        ----------
+        phot : gerbls.pyDataContainer
+            Input data.
+        u_fixed : bool, optional
+            Whether to keep the limb darkening parameters fixed, by default False.
+            If True, values for ``u1`` and/or ``u2`` must be set.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            Raises an error if ``u_fixed == True`` but ``u1`` and ``u2`` have not been set.
+        """
 
         if not _HAS_BATMAN:
             gerbls.raise_import_error("LDModel.fit", "batman")
@@ -128,6 +196,7 @@ class LDModel(TransitModel):
         # Get [u1, u2] from the [q1, q2] LD reparametrization by Kipping (2013)
         def u(q1, q2):
             return [2 * q1**0.5 * q2, q1**0.5 * (1 - 2 * q2)]
+
         def u_err(q1, q2, q1_err, q2_err):
             u_ = u(q1, q2)
             return [((0.5 * q1_err / q1)**2 + (q2_err / q2)**2)**0.5 * abs(u_[0]),
@@ -181,9 +250,23 @@ class LDModel(TransitModel):
         self.chi2_const = self.get_chi2_const(phot)
         self.chi2r = self.chi2 / (phot.size - 1)
         self.dchi2 = self.chi2 - self.chi2_const
-    
+
     @classmethod
     def from_BLS(cls, bls: gerbls.pyBLSResult, target: Optional[gerbls.pyTarget] = None):
+        """
+        Set up a limb-darkened model from a BLS result.
+
+        Parameters
+        ----------
+        bls : gerbls.pyBLSResult
+            BLS result.
+        target : Optional[gerbls.pyTarget], optional
+            Data structure containing stellar parameters, by default None
+
+        Returns
+        -------
+        gerbls.LDModel
+        """
         b = 0. if target is None else target.estimate_b(bls.P, bls.dur)
         r = (bls.dmag / bls.mag0)**0.5
         return cls(b=b, mag0=bls.mag0, P=bls.P, r=r, t0=bls.t0, target=target)

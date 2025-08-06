@@ -14,8 +14,7 @@ documentation for details.
    :maxdepth: 2
    :caption: Contents:
 
-   autodoc
-
+   api/index
 
 Indices and tables
 ==================

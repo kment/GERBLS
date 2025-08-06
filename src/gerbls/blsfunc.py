@@ -15,7 +15,7 @@ def run_bls(time: npt.ArrayLike,
     """
     A basic convenience function to generate a BLS spectrum.
     The data must be evenly sampled in time to run the BLS,
-    use t_samp to specify the cadence for any resampling.
+    use `t_samp` to specify the cadence for any resampling.
 
     Parameters
     ----------
@@ -47,12 +47,12 @@ def run_bls(time: npt.ArrayLike,
     -------
     dict
         Dictionary with BLS results:
-        `P` is the list of tested periods
-        `dchi2` is the BLS statistic (Delta chi squared) at each period
-        `t0` is the best-fit transit mid-point at each period
-        `dur` is the best-fit duration at each period
-        `mag0` is the best-fit flux baseline at each period
-        `dmag` is the best-fit transit depth at each period
+        * `P` is the list of tested periods
+        * `dchi2` is the BLS statistic (Delta chi squared) at each period
+        * `t0` is the best-fit transit mid-point at each period
+        * `dur` is the best-fit duration at each period
+        * `mag0` is the best-fit flux baseline at each period
+        * `dmag` is the best-fit transit depth at each period
     """
 
     # Make sure the data is time-sorted and formatted as Numpy arrays

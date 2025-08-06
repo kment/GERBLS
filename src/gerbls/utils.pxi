@@ -19,5 +19,19 @@ def raise_import_error(str source_function, str missing_dep):
         f"that {missing_dep.split('.')[0]} has been properly installed.")
 
 def resample(pyDataContainer data, double t_samp):
+    """
+    Returns a copy of the input data, resampled to the specified time cadence.
+
+    Parameters
+    ----------
+    data : gerbls.pyDataContainer
+        Input data.
+    t_samp : float
+        Desired time cadence.
+    
+    Returns
+    -------
+    gerbls.pyDataContainer
+    """
     out = pyDataContainer.from_ptr(resample_uniform(data.cPtr[0], t_samp).release(), True)
     return out
