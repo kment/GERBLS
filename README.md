@@ -24,7 +24,8 @@ def run_bls(time: npt.ArrayLike,
             min_period: float,
             max_period: float,
             t_samp: float = 0.,
-            max_duration_mode: str = 'fractional',
+            duration_mode: str = 'constant',
+            min_duration_factor: float = 0.,
             max_duration_factor: float = 0.2):
     """
     A basic convenience function to generate a BLS spectrum.
@@ -46,12 +47,14 @@ def run_bls(time: npt.ArrayLike,
     t_samp : float, optional
         Time sampling to bin the data before running the BLS.
         If 0 (default), the median time difference between observations is used.
-    max_duration_mode : str, optional
-        Determines how the maximum tested transit duration is calculated at each period.
+    duration_mode : str, optional
+        Determines how the tested transit durations are calculated at each period.
         If 'constant', the maximum duration is set to max_duration_factor.
         If 'fractional', the tested orbital period is multiplied by max_duration_factor.
-        If 'physical', the expected transit duration for a circular orbit is multiplied by 
+        If 'physical', the expected transit duration for a circular orbit is multiplied by
         max_duration_factor.
+    min_duration_factor : float, optional
+        A scaling factor that affects the minimum tested transit duration.
     max_duration_factor : float, optional
         A scaling factor that affects the maximum tested transit duration.
 
@@ -68,7 +71,7 @@ def run_bls(time: npt.ArrayLike,
     """
 ```
 
-For example, running the following Python script generates a BLS spectrum for orbital periods between 0.4 and 10 days, where the light curve has been stored in arrays `time`, `mag`, and `err`:
+For example, running the following Python script generates a BLS spectrum for orbital periods between 0.4 and 10 days, where the light curve has been stored in arrays `time`, `mag`, and `err`. At each period, it fits for all transit durations between 0. and 0.2 (in units of `time`) - these can be changed via `min_duration_factor` and `max_duration_factor`. The spacing between subsequent searched durations will be set equal to `t_samp`. To search for a single fixed transit duration instead (this will run much faster!), set both `min_duration_factor` and `max_duration_factor` equal to that value.
 ```
 from gerbls import run_bls
 results = run_bls(time, mag, err, 0.4, 10)

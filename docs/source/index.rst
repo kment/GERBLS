@@ -21,8 +21,5 @@ GERBLS can outperform popular brute-force BLS implementations such as
    examples/fastbls
    api/index
 
-Indices and tables
-==================
-
 * :ref:`genindex`
 * :ref:`search`

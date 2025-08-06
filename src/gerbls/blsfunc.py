@@ -9,7 +9,7 @@ def run_bls(time: npt.ArrayLike,
             min_period: float,
             max_period: float,
             t_samp: float = 0.,
-            duration_mode: str = 'fractional',
+            duration_mode: str = 'constant',
             min_duration_factor: float = 0.,
             max_duration_factor: float = 0.2):
     """
