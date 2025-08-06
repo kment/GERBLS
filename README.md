@@ -6,14 +6,13 @@
 
 ## Installation
 
-Currently, `GERBLS` requires a Python version of 3.9 or above. Additional dependencies are `numpy` and a build-time dependency on `Cython`. These will be checked and/or installed automatically.
-
-To install the latest version of `GERBLS`, run the following code:
-```
-pip install gerbls
-```
+Refer to the [documentation](https://gerbls.readthedocs.io/en/stable/install.html) for installation instructions.
 
 If you encounter any issues while installing or using GERBLS, or would like to request a feature to be added to the code, please do not hesitate to [contact me](mailto:kxm821@psu.edu).
+
+## Documentation
+
+A "Read The Docs" documentation page can be accessed [here](https://gerbls.readthedocs.io/).
 
 ## Basic usage
 
@@ -78,10 +77,6 @@ results = run_bls(time, mag, err, 0.4, 10)
 In this case, `results` is a Python dictionary with the keys defined above in the function description. The searched periods are evenly spaced in frequency, and the spacing is set by the time sampling of the data. The BLS statistic `results['dchi2']` ($\Delta\chi^2$) is the difference between the total $\chi^2$ parameters of a box-shaped model and a constant flux model fit to the data. In the case of pure Gaussian white noise, the signal-to-noise ratio of the fitted transit can be estimated as $\sqrt{\Delta\chi^2}$.
 
 The fast-folding BLS requires data to be evenly spaced in time. `gerbls.run_bls` provides an optional parameter `t_samp` that can be used to resample (bin) the data to the required cadence before running the BLS. **Increasing this value will make the BLS run faster**; however, one should make sure that any real transits in the data are at least a few times larger than the value for `t_samp` so they do not get removed by the binning. If no value is provided for `t_samp`, the median time sampling of the input data is used: this works well if the input `time` array is already close to evenly sampled.
-
-## Documentation
-
-A full "Read The Docs" documentation page is currently in the works.
 
 ## Features in development
 

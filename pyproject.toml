@@ -36,6 +36,7 @@ extras = [
 ]
 
 [project.urls]
+Documentation = "https://gerbls.readthedocs.io/"
 Repository = "https://github.com/kment/GERBLS.git"
 
 [tool.setuptools.dynamic]
