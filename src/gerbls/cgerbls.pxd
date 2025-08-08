@@ -35,8 +35,18 @@ cdef extern from "cpp/model.hpp":
         unique_ptr[DataContainer] rdata
         vector[double] time_spent
         
-        BLSModel_FFA(
-            DataContainer, double, double, Target*, int, double, double, double, bool_t, double, double)
+        BLSModel_FFA(DataContainer,
+                     double,
+                     double,
+                     Target*,
+                     int,
+                     const vector[double]*,
+                     double,
+                     double,
+                     double,
+                     bool_t,
+                     double,
+                     double)
         
         void run_double(bool_t)
 

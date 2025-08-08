@@ -6,6 +6,7 @@
 */
 
 #include "ffafunc.hpp"
+#include "model.hpp"
 #include "physfunc.hpp"
 #include "riptide/block.hpp"
 #include "riptide/kernels.hpp"
@@ -65,15 +66,56 @@ void array_dchi2_max(const T *__restrict__ prod,
 template <typename T>
 void chisq_2d(riptide::ConstBlock<T> wprod,
               riptide::ConstBlock<T> weights,
+              const std::vector<size_t> &widths,
+              BLSResult<T> *results)
+{
+    for (size_t i = 0; i < wprod.rows; ++i) {
+        chisq_row<T>(wprod.rowptr(i), weights.rowptr(i), wprod.cols, widths, *results);
+        results++;
+    }
+}
+
+// Output: results (must be array of size wprod.rows)
+template <typename T>
+void chisq_2d(riptide::ConstBlock<T> wprod,
+              riptide::ConstBlock<T> weights,
               const size_t min_width,
               const size_t max_width,
               BLSResult<T> *results)
 {
     for (size_t i = 0; i < wprod.rows; ++i) {
-        // snr1(block.rowptr(i), block.cols, widths, stdnoise, out);
         chisq_row<T>(
             wprod.rowptr(i), weights.rowptr(i), wprod.cols, min_width, max_width, *results);
         results++;
+    }
+}
+
+// Evaluate dchi2 for a fixed period (FFA row)
+// Output: BLSResult corresponding to the highest dchi2
+template <typename T>
+void chisq_row(const T *__restrict__ wprod,
+               const T *__restrict__ wts,
+               const size_t size,
+               const std::vector<size_t> &widths,
+               BLSResult<T> &result)
+{
+    size_t previous_width = 0;
+    const size_t max_width = *std::max_element(widths.begin(), widths.end());
+    T cpfsum1[size + max_width];
+    T cpfsum2[size + max_width];
+    T inmag[size];
+    T inwts[size];
+    riptide::circular_prefix_sum<T>(wprod, size, size + max_width, cpfsum1);
+    riptide::circular_prefix_sum<T>(wts, size, size + max_width, cpfsum2);
+    const T wtotal = cpfsum2[size - 1]; // sum of weights
+
+    for (size_t width : widths) {
+        if (width < 1 || width == previous_width)
+            continue;
+        array_diff<T>(cpfsum1 + width, cpfsum1, size, inmag);
+        array_diff<T>(cpfsum2 + width, cpfsum2, size, inwts);
+        array_dchi2_max<T>(inmag, inwts, size, wtotal, result, width);
+        previous_width = width;
     }
 }
 
@@ -103,52 +145,53 @@ void chisq_row(const T *__restrict__ wprod,
 }
 
 // Compute the periodogram of a time series that has been normalised to zero mean and unit variance.
-// get_duration_limits(P) should return the min and max transit duration at the given orbital period
 // P Output: vector of BLSResult<T> containing the best fit for each tested orbital period
 template <typename T>
-std::vector<BLSResult<T>>
-    periodogram(const T *__restrict__ mag,
-                const T *__restrict__ wts,
-                size_t size,
-                double tsamp,
-                // const std::vector<size_t>& widths,
-                std::function<std::tuple<double, double>(double)> get_duration_limits,
-                double period_min,
-                double period_max,
-                bool downsample,
-                double ds_invpower,
-                double ds_threshold,
-                bool verbose)
+std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
+                                      const T *__restrict__ wts,
+                                      size_t size,
+                                      const BLSModel_FFA &model,
+                                      bool verbose)
 {
     // periodogram_check_arguments(size, tsamp, period_min, period_max, bins_min, bins_max);
 
+    // Model parameters
+    const double period_min = 1. / model.f_max;
+    const double period_max = 1. / model.f_min;
+
     // Temporary variables
     double min_width_P, max_width_P;
+    std::vector<size_t> widths(model.durations.size()); // Transit duration widths to search
     size_t bstart, bstop;
     T *wprod_, *weights_;
 
     // Maximum possible size of the data
-    const size_t n_max = size + (size_t)(period_max / tsamp);
+    const size_t n_max = size + (size_t)(period_max / model.t_samp);
 
     // Calculate periodogram length and allocate memory for output
-    const size_t length = periodogram_length(
-        size, tsamp, period_min, period_max, downsample, ds_invpower, ds_threshold);
+    const size_t length = periodogram_length(size,
+                                             model.t_samp,
+                                             period_min,
+                                             period_max,
+                                             model.downsample,
+                                             model.ds_invpower,
+                                             model.ds_threshold);
     std::vector<BLSResult<T>> results(length);
     BLSResult<T> *presult = results.data();
 
     // Geometric growth factor for the downsampling parameter
-    double ds_geo = ds_threshold;
+    double ds_geo = model.ds_threshold;
 
     // Minimum and maximum number of bins in each downsampling loop iteration
-    size_t bins_min = period_min / tsamp;
+    size_t bins_min = period_min / model.t_samp;
     // size_t bins_max = downsample ? bins_min * ds_threshold + 1 : period_max / tsamp;
 
     // Number of required downsampling cycles
     const size_t num_downsamplings =
-        downsample ? ceil(log(period_max / period_min) / log(ds_geo) / ds_invpower) : 1;
+        model.downsample ? ceil(log(period_max / period_min) / log(ds_geo) / model.ds_invpower) : 1;
 
     if (verbose) {
-        if (downsample)
+        if (model.downsample)
             std::cout << "Downsampling: ON     Number of downsamplings: " << num_downsamplings
                       << "\n";
         else
@@ -189,8 +232,8 @@ std::vector<BLSResult<T>>
     /* Downsampling loop */
     for (size_t ids = 0; ids < num_downsamplings; ++ids) {
 
-        const double f = pow(ds_geo, ids); // current downsampling factor
-        const double tau = f * tsamp;      // current sampling time
+        const double f = pow(ds_geo, ids);  // current downsampling factor
+        const double tau = f * model.t_samp; // current sampling time
         const double period_max_samples = period_max / tau;
         const size_t n = riptide::downsampled_size(size, f); // current number of real input samples
         const size_t n_padded = n + period_max_samples;      // number of samples after zero-padding
@@ -217,13 +260,19 @@ std::vector<BLSResult<T>>
 
         // Min and max number of bins with which to FFA transform
         // NOTE: bstop is INclusive
-        if (downsample) {
-            bstart = bins_min * pow(ds_threshold, (ds_invpower - 1) * ids);
-            bstop = std::min(bstart * pow(ds_threshold, ds_invpower), period_max_samples);
+        if (model.downsample) {
+            bstart = bins_min * pow(model.ds_threshold, (model.ds_invpower - 1) * ids);
+            bstop =
+                std::min(bstart * pow(model.ds_threshold, model.ds_invpower), period_max_samples);
         }
         else {
             bstart = bins_min;
             bstop = period_max_samples;
+        }
+
+        // Pre-calculate tested transit widths if they are constant and explicitly defined
+        if (model.explicit_durations() && model.duration_mode == 1) {
+            model.set_widths(0., tau, widths);
         }
 
         /* FFA transform loop */
@@ -234,16 +283,25 @@ std::vector<BLSResult<T>>
             const size_t rows = n_padded / bins;
             const double period_ceil = std::min(period_max_samples, bins + 1.);
             const size_t rows_eval = std::min(rows, riptide::ceilshift(rows, bins, period_ceil));
-            std::tie(min_width_P, max_width_P) = get_duration_limits((bins + 1) * tau);
-            const size_t min_width = std::max((size_t)(1), (size_t)(min_width_P / tau));
-            const size_t max_width = std::max(min_width, (size_t)(max_width_P / tau));
 
             riptide::transform<T>(wprod_, rows, bins, ffabuf, ffamag);
             riptide::transform<T>(weights_, rows, bins, ffabuf, ffawts);
 
             auto block1 = riptide::ConstBlock<T>(ffamag, rows_eval, bins);
             auto block2 = riptide::ConstBlock<T>(ffawts, rows_eval, bins);
-            chisq_2d<T>(block1, block2, min_width, max_width, presult);
+
+            if (model.explicit_durations()) {
+                if (model.duration_mode != 1) {
+                    model.set_widths((bins + 1) * tau, tau, widths);
+                }
+                chisq_2d<T>(block1, block2, widths, presult);
+            }
+            else {
+                std::tie(min_width_P, max_width_P) = model.get_duration_limits((bins + 1) * tau);
+                const size_t min_width = std::max((size_t)(1), (size_t)(min_width_P / tau));
+                const size_t max_width = std::max(min_width, (size_t)(max_width_P / tau));
+                chisq_2d<T>(block1, block2, min_width, max_width, presult);
+            }
 
             auto t_end = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> rtime = t_end - t_start;
@@ -264,30 +322,10 @@ std::vector<BLSResult<T>>
 }
 
 // Explicit instantiations for float and double
-template std::vector<BLSResult<float>>
-    periodogram(const float *__restrict__,
-                const float *__restrict__,
-                size_t,
-                double,
-                std::function<std::tuple<double, double>(double)>,
-                double,
-                double,
-                bool,
-                double,
-                double,
-                bool);
-template std::vector<BLSResult<double>>
-    periodogram(const double *__restrict__,
-                const double *__restrict__,
-                size_t,
-                double,
-                std::function<std::tuple<double, double>(double)>,
-                double,
-                double,
-                bool,
-                double,
-                double,
-                bool);
+template std::vector<BLSResult<float>> periodogram(
+    const float *__restrict__, const float *__restrict__, size_t, const BLSModel_FFA &, bool);
+template std::vector<BLSResult<double>> periodogram(
+    const double *__restrict__, const double *__restrict__, size_t, const BLSModel_FFA &, bool);
 
 /*
 Returns the total number of trial periods in a periodogram

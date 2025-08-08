@@ -5,6 +5,7 @@ from gerbls.cgerbls cimport *
 from libc.stdlib cimport srand
 from libc.time cimport time as ctime
 from libcpp cimport bool as bool_t
+from libcpp.vector cimport vector
 import numpy as np
 cimport numpy as np
 

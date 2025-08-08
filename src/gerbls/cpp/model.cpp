@@ -25,6 +25,7 @@ BLSModel::BLSModel(DataContainer &data_ref,
                    double f_max,
                    const Target *targetPtr,
                    int duration_mode,
+                   const std::vector<double> *durations,
                    double min_duration_factor,
                    double max_duration_factor)
 {
@@ -37,14 +38,23 @@ BLSModel::BLSModel(DataContainer &data_ref,
         this->f_max = f_max;
     if (duration_mode > 0)
         this->duration_mode = duration_mode;
+    if (durations != nullptr)
+        this->durations = *durations;
     if (min_duration_factor > 0)
         this->min_duration_factor = min_duration_factor;
     if (max_duration_factor > 0)
         this->max_duration_factor = max_duration_factor;
 }
 
+// Whether to use transit durations defined by durations, as opposed to a range defined by
+// min_duration_factor and max_duration_factor
+bool BLSModel::explicit_durations() const
+{
+    return !durations.empty();
+}
+
 // Get the minimum and maximum tested transit duration at a given period P
-std::tuple<double, double> BLSModel::get_duration_limits(double P)
+std::tuple<double, double> BLSModel::get_duration_limits(double P) const
 {
     double min_duration, max_duration;
 
@@ -96,6 +106,48 @@ void BLSModel::run(bool verbose)
     std::cout << "run() is not defined for an object of type " << typeid(*this).name();
 }
 
+// Set the searched transit widths (durations in bins) for a given period P
+// tau is the time sampling of data bins
+// CAUTION! Assumes that widths has the same size as this->durations (not checked)
+void BLSModel::set_widths(double P, double tau, std::vector<size_t> &widths) const
+{
+
+    switch (duration_mode) {
+    // Constant duration limits
+    case 1:
+        for (size_t i = 0; i < durations.size(); i++) {
+            widths[i] = round(durations[i] / tau);
+        }
+        break;
+
+    // Duration limits proportional to the orbital period
+    case 2:
+        for (size_t i = 0; i < durations.size(); i++) {
+            widths[i] = round(durations[i] * P / tau);
+        }
+        break;
+
+    // Duration limits proportional to the predicted physical transit duration
+    case 3:
+        if (target == nullptr) {
+            throw std::runtime_error("Target must not be null with max_duration_mode == 3.");
+        }
+        else {
+            const double transit_dur = get_transit_dur(P, target->M, target->R, 0);
+            for (size_t i = 0; i < durations.size(); i++) {
+                widths[i] = round(durations[i] * transit_dur / tau);
+            }
+        }
+        break;
+
+    // Invalid duration code
+    default:
+        throw std::runtime_error("BLSModel::get_max_duration() called with invalid "
+                                 "duration_mode = " +
+                                 std::to_string(duration_mode));
+    }
+}
+
 // Constructor
 // If any numeric value is 0 then the default value is used
 // If no target is given, use default values
@@ -109,8 +161,14 @@ BLSModel_bf::BLSModel_bf(DataContainer &data_ref,
                          int duration_mode,
                          double min_duration_factor,
                          double max_duration_factor) :
-    BLSModel(
-        data_ref, f_min, f_max, targetPtr, duration_mode, min_duration_factor, max_duration_factor)
+    BLSModel(data_ref,
+             f_min,
+             f_max,
+             targetPtr,
+             duration_mode,
+             nullptr,
+             min_duration_factor,
+             max_duration_factor)
 {
     // Override numeric values if given
     if (dt_per_step > 0)
@@ -138,7 +196,8 @@ BLSModel_bf::BLSModel_bf(DataContainer &data_ref,
                          int duration_mode,
                          double min_duration_factor,
                          double max_duration_factor) :
-    BLSModel(data_ref, 0, 0, targetPtr, duration_mode, min_duration_factor, max_duration_factor)
+    BLSModel(
+        data_ref, 0, 0, targetPtr, duration_mode, nullptr, min_duration_factor, max_duration_factor)
 {
     // Set min and max frequencies
     f_min = *std::min_element(freq.begin(), freq.end());
@@ -253,6 +312,7 @@ BLSModel_FFA::BLSModel_FFA(DataContainer &data_ref,
                            double f_max,
                            const Target *targetPtr,
                            int duration_mode,
+                           const std::vector<double> *durations,
                            double min_duration_factor,
                            double max_duration_factor,
                            double t_samp,
@@ -260,8 +320,14 @@ BLSModel_FFA::BLSModel_FFA(DataContainer &data_ref,
                            double ds_invpower,
                            double ds_threshold,
                            size_t N_bins_transit_min) :
-    BLSModel(
-        data_ref, f_min, f_max, targetPtr, duration_mode, min_duration_factor, max_duration_factor)
+    BLSModel(data_ref,
+             f_min,
+             f_max,
+             targetPtr,
+             duration_mode,
+             durations,
+             min_duration_factor,
+             max_duration_factor)
 {
     // Override numeric values if given
     if (t_samp > 0)
@@ -332,21 +398,12 @@ template <typename T> void BLSModel_FFA::run_prec(bool verbose)
     }
 
     // Function wrapper to return the maximum tested transit duration at each period
-    auto get_duration_limits_ =
-        std::bind(&BLSModel::get_duration_limits, this, std::placeholders::_1);
+    // auto get_duration_limits_ =
+    //    std::bind(&BLSModel::get_duration_limits, this, std::placeholders::_1);
 
     auto t_start = std::chrono::high_resolution_clock::now();
-    std::vector<BLSResult<T>> pgram = std::move(periodogram<T>(mag.data(),
-                                                               wts.data(),
-                                                               mag.size(),
-                                                               t_samp,
-                                                               get_duration_limits_,
-                                                               1. / f_max,
-                                                               1. / f_min,
-                                                               downsample,
-                                                               ds_invpower,
-                                                               ds_threshold,
-                                                               verbose));
+    std::vector<BLSResult<T>> pgram =
+        std::move(periodogram<T>(mag.data(), wts.data(), mag.size(), *this, verbose));
     auto t_end = std::chrono::high_resolution_clock::now();
 
     if (verbose) {

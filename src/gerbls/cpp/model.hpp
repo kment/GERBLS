@@ -8,11 +8,13 @@
 #ifndef MODEL_HPP_
 #define MODEL_HPP_
 
-#include "ffafunc.hpp"
 #include "structure.hpp"
 #include <fstream>
 #include <tuple>
 #include <unordered_map>
+
+// Forward declarations
+template <typename T> struct BLSResult;
 
 // BLS model (base class)
 struct BLSModel {
@@ -23,6 +25,7 @@ struct BLSModel {
     int duration_mode = 2;            // Affects tested transit durations
     double min_duration_factor = 0;   // Affects get_min_duration()
     double max_duration_factor = 0.1; // Affects get_max_duration()
+    std::vector<double> durations;    // List of transit durations to test
 
     // Pointer to associated data
     DataContainer *data = nullptr;
@@ -39,13 +42,18 @@ struct BLSModel {
              double f_max = 0.,
              const Target *targetPtr = nullptr,
              int duration_mode = 0,
+             const std::vector<double> *durations = nullptr,
              double min_duration_factor = 0.,
              double max_duration_factor = 0.);
     virtual ~BLSModel() = default;
 
+    bool explicit_durations() const; // Whether to use explicit durations (as opposed to range)
     std::tuple<double, double>
-        get_duration_limits(double P); // Min and max transit duration to test at a given period
-    size_t N_freq();                   // Get number of frequencies
+        get_duration_limits(double P) const; // Min & max transit duration to test at a given period
+    size_t N_freq();                         // Get number of frequencies
+    void set_widths(double P,
+                    double tau,
+                    std::vector<size_t> &widths) const; // Set transit widths for period P
 
     // Virtual functions to be overwritten
     virtual void run(bool verbose);
@@ -100,12 +108,12 @@ private:
 struct BLSModel_FFA : public BLSModel {
 
     // Settings
-    bool downsample = false;        // Automatic downsampling for shorter periods
+    bool downsample = false; // Automatic downsampling for shorter periods
     double ds_invpower = 3.;
-    double ds_threshold = 1.1;      // Downsample when the max transit duration
-                                    // drops by this fraction
-    size_t N_bins_transit_min = 1;  // Minimum number of bins per transit
-    double t_samp = 2. / 60 / 24;   // Uniform cadence to resample data to
+    double ds_threshold = 1.1;     // Downsample when the max transit duration
+                                   // drops by this fraction
+    size_t N_bins_transit_min = 1; // Minimum number of bins per transit
+    double t_samp = 2. / 60 / 24;  // Uniform cadence to resample data to
 
     // Pointer to the resampled data
     std::unique_ptr<DataContainer> rdata;
@@ -113,12 +121,13 @@ struct BLSModel_FFA : public BLSModel {
     // Time spent evaluating dchi2 at each tested period
     std::vector<double> time_spent;
 
-    // Constructor and destructor
+    // Constructor
     BLSModel_FFA(DataContainer &data_ref,
                  double f_min = 0.,
                  double f_max = 0.,
                  const Target *targetPtr = nullptr,
                  int duration_mode = 0,
+                 const std::vector<double> *durations = nullptr,
                  double min_duration_factor = 0.,
                  double max_duration_factor = 0.,
                  double t_samp = 0.,

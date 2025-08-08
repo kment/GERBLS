@@ -234,6 +234,7 @@ cdef class pyFastBLS(pyBLSModel):
               double t_samp = 0.,
               bool_t verbose = True,
               str duration_mode = "",
+              vector[double] durations = [],
               double min_duration_factor = 0.,
               double max_duration_factor = 0.,
               bool_t downsample = False,
@@ -260,10 +261,14 @@ cdef class pyFastBLS(pyBLSModel):
         duration_mode : {'constant', 'fractional', 'physical'}, optional
             Affects how the maximum tested transit duration is determined at each period, by default
             'fractional'.
+        durations : list, optional
+            If given, use a specific list of duration factors instead of a range.
         min_duration_factor : float, optional
-            Affects the minimum searched transit duration at each period, by default 0.
+            Affects the minimum searched transit duration at each period, by default 0. Has no
+            effect if `durations` is given.
         max_duration_factor : float, optional
-            Affects the maximum searched transit duration at each period, by default 0.1.
+            Affects the maximum searched transit duration at each period, by default 0.1. Has no
+            effect if `durations` is given.
         downsample : bool, optional
             Whether to automatically downsample the data at longer periods, by default False.
         downsample_invpower : float, optional
@@ -288,6 +293,7 @@ cdef class pyFastBLS(pyBLSModel):
                                      1./min_period,
                                      targetPtr,
                                      convert_duration_mode(duration_mode),
+                                     (&durations if durations.size() else NULL),
                                      min_duration_factor,
                                      max_duration_factor,
                                      t_samp,
