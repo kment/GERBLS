@@ -354,7 +354,7 @@ cdef class pyBLSAnalyzer:
     @property
     def dchi2(self):
         """np.ndarray: Array of best-fit :math:`\Delta\chi^2` values for each tested period."""
-        return np.asarray(self._dchi2)
+        return -np.asarray(self._dchi2)     # Make the dchi2 positive for convenience
     
     @property
     def dmag(self):
@@ -423,7 +423,7 @@ cdef class pyBLSAnalyzer:
         if not self.mask.any():
             return None
         
-        cdef size_t mask_index = np.argmax(-self.dchi2[self.mask])
+        cdef size_t mask_index = np.argmax(self.dchi2[self.mask])
         cdef size_t index = np.where(self.mask)[0][mask_index]
         
         # Returned frequencies must be some range apart

@@ -24,6 +24,9 @@ def test_bls_basic(phot_test):
     # Check whether the correct period was recovered
     assert abs(results['P'][np.argmax(results['dchi2'])] - correct_P) < 0.001
 
+    # Make sure the dchi2 is reasonably high
+    assert results['dchi2'][np.argmax(results['dchi2'])] > 1000
+
 def test_bls_bf(phot_test):
     """
     Test for the brute-force BLS.
@@ -40,6 +43,7 @@ def test_bls_bf(phot_test):
 
     best_model = blsa.generate_models(1)[0]
     assert abs(best_model.P - correct_P) < 0.001
+    assert best_model.dchi2 > 1000
 
 def test_bls_fast(phot_test):
     """

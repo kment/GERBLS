@@ -73,7 +73,7 @@ def run_bls(time: npt.ArrayLike,
     # Return the BLS spectrum
     blsa = gerbls.pyBLSAnalyzer(bls)
     return {'P': np.copy(blsa.P),
-            'dchi2': np.copy(-blsa.dchi2),
+            'dchi2': np.copy(blsa.dchi2),
             't0': np.copy(blsa.t0),
             'dur': np.copy(blsa.dur),
             'mag0': np.copy(blsa.mag0),

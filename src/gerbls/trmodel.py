@@ -249,7 +249,7 @@ class LDModel(TransitModel):
         self.chi2 = np.sum(((f(phot.rjd, *popt) - phot.mag) / phot.err)**2)
         self.chi2_const = self.get_chi2_const(phot)
         self.chi2r = self.chi2 / (phot.size - 1)
-        self.dchi2 = self.chi2 - self.chi2_const
+        self.dchi2 = self.chi2_const - self.chi2
 
     @classmethod
     def from_BLS(cls, bls: gerbls.pyBLSResult, target: Optional[gerbls.pyTarget] = None):
