@@ -23,7 +23,7 @@ cdef extern from "cpp/model.hpp":
         vector[size_t] N_bins
         
         size_t N_freq()
-        void run(bool_t)
+        void run(bool_t, bool_t)
     
     cdef cppclass BLSModel_bf(BLSModel):
         BLSModel_bf(
@@ -48,15 +48,21 @@ cdef extern from "cpp/model.hpp":
                      double,
                      double)
         
-        void run_double(bool_t)
+        void run_double(bool_t, bool_t)
+    
+    cdef cppclass NoiseBLS:
+        unique_ptr[BLSModel] model
+        vector[double] dchi2
+
+        NoiseBLS(BLSModel)
+
+        vector[double] generate(size_t, int, bool_t)
 
 cdef extern from "cpp/physfunc.hpp":
-    double gdraw(double, double, double)
     double get_aR_ratio(double, double, double)
     double get_inc(double, double, double, double)
     void get_phase_range(double, double*, double*)
     double get_transit_dur(double, double, double, double)
-    double grand(double, double)
 
 cdef extern from "cpp/structure.hpp":
     cdef cppclass DataContainer:
@@ -93,3 +99,8 @@ cdef extern from "cpp/structure.hpp":
         
         double logg()
         double Teff()
+    
+    cdef cppclass Vector2D_double "Vector2D<double>":
+        vector[double] data
+        size_t cols
+        size_t rows

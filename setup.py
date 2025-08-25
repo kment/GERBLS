@@ -1,10 +1,17 @@
+"""
+setup.py for installing GERBLS
+
+Most of the project settings/metadata are in `pyproject.toml`.
+Currently, this file is included because the setuptools (v80) support for defining extention modules
+inside `pyproject.toml` is still considered experimental and may be subject to change.
+"""
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 import numpy as np
 
-setup(name = "_gerbls",
-      ext_modules = cythonize([Extension("_gerbls",
-                                         ["src/gerbls/gerbls.pyx",
+setup(name = "gerbls",
+      ext_modules = cythonize([Extension("gerbls.core",
+                                         ["src/gerbls/core.pyx",
                                           "src/gerbls/cpp/ffafunc.cpp",
                                           "src/gerbls/cpp/model.cpp",
                                           "src/gerbls/cpp/physfunc.cpp",
@@ -22,8 +29,7 @@ setup(name = "_gerbls",
                                                                "-fno-signed-zeros",
                                                                "-fno-trapping-math"])], 
                               annotate=False,
-                              #compiler_directives={"embedsignature": True, "binding": True}
-                              compiler_directives={"embedsignature": False}
+                              compiler_directives={"embedsignature": True}
                               ),
       zip_safe = False,
       )

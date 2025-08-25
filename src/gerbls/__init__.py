@@ -1,8 +1,8 @@
 # GERBLS version
-__version__ = "0.7.4"
+__version__ = "0.8.0"
 
 # Compiled Cython library
-from _gerbls import *
+from .core import *
 
 # Core GERBLS functionality
 from .blsfunc import run_bls

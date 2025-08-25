@@ -389,7 +389,7 @@ size_t periodogram_length(size_t size,
 std::unique_ptr<DataContainer> resample_uniform(const DataContainer &data, double tsamp)
 {
     std::unique_ptr<DataContainer> out(new DataContainer);
-    size_t N_sampled = ceil((data.rjd[data.size - 1] - data.rjd[0]) / tsamp + 0.5);
+    size_t N_sampled = resample_uniform_size(data, tsamp);
     out->allocate(N_sampled);
     out->valid_mask.reset(new bool[N_sampled]);
     size_t i = 0;
@@ -418,4 +418,11 @@ std::unique_ptr<DataContainer> resample_uniform(const DataContainer &data, doubl
     }
 
     return out;
+}
+
+// Calculate the number of data points in data resampled by resample_uniform()
+// Assumes the data are already time-sorted
+size_t resample_uniform_size(const DataContainer &data, double tsamp)
+{
+    return ceil((data.rjd[data.size - 1] - data.rjd[0]) / tsamp + 0.5);
 }

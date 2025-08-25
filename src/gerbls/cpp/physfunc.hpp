@@ -25,9 +25,6 @@ void bin(double P,
          double *bin_errors,
          size_t *N_bins_real);
 
-// Draw a random number from a power prior distribution
-double gdraw(double a, double b, double q);
-
 // Calculate the a/R ratio
 double get_aR_ratio(double P, double M, double R);
 
@@ -43,9 +40,6 @@ void get_phase_range(double P, double *phase_min, double *phase_max);
 
 // Estimate the transit duration given orbital period P (in days)
 double get_transit_dur(double P, double M = 1, double R = 1, double b = 0);
-
-// Generate a random number between a and b
-double grand(double a, double b);
 
 // Find the arithmetic mean of an array or a vector
 double mean(const double *arr, size_t size);

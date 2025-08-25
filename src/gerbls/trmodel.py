@@ -1,7 +1,6 @@
 import gerbls
 import numpy as np
 import numpy.typing as npt
-from copy import deepcopy
 from typing import Optional
 
 # Optional dependencies

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import gerbls
 import numpy as np
 import numpy.typing as npt
@@ -8,20 +9,20 @@ def run_bls(time: npt.ArrayLike,
             err: npt.ArrayLike,
             min_period: float,
             max_period: float,
-            durations: list = [],
+            durations: list,
             t_samp: float = 0.):
     """
     A basic convenience function to generate a BLS spectrum.
     The data must be evenly sampled in time to run the BLS,
-    use `t_samp` to specify the cadence for any resampling.
+    use ``t_samp`` to specify the cadence for any resampling.
 
     Parameters
     ----------
-    time : npt.ArrayLike
+    time : ArrayLike
         Array of observation timestamps.
-    mag : npt.ArrayLike
+    mag : ArrayLike
         Array of observed fluxes.
-    err : npt.ArrayLike
+    err : ArrayLike
         Array of flux uncertainties for each observation.
     min_period : float
         Minimum BLS period to search.
@@ -36,13 +37,18 @@ def run_bls(time: npt.ArrayLike,
     Returns
     -------
     dict
-        Dictionary with BLS results:
-        * `P` is the list of tested periods
-        * `dchi2` is the BLS statistic (Delta chi squared) at each period
-        * `t0` is the best-fit transit mid-point at each period
-        * `dur` is the best-fit duration at each period
-        * `mag0` is the best-fit flux baseline at each period
-        * `dmag` is the best-fit transit depth at each period
+        A dictionary with BLS results:
+
+        ========= ===================================================
+        Key       Value
+        ========= ===================================================
+        ``P``     list of tested periods
+        ``dchi2`` BLS statistic (:math:`\Delta\chi^2`) at each period
+        ``t0``    best-fit transit mid-point at each period
+        ``dur``   best-fit duration at each period
+        ``mag0``  best-fit flux baseline at each period
+        ``dmag``  best-fit transit depth at each period
+        ========= ===================================================
     """
 
     # Make sure the data is time-sorted and formatted as Numpy arrays

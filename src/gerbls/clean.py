@@ -28,20 +28,21 @@ def clean_savgol(phot: gerbls.pyDataContainer,
     N_flares : int, optional
         Number of iterations to detect flares, by default 3
     sigma_clip: float, optional
-        Whether to remove outliers more than X sigma from the initial baseline, by default 5. To turn off, enter 0.
+        Whether to remove outliers more than X sigma from the initial baseline, by default 5.
+        To turn off, enter 0.
     window_length: float, optional
         Window length in time units (days) for the Savitsky-Golay filter, by default 1.
     chunk_length: float, optional
-        If given, divide the data into chunks first where the time gaps in data are longer than this length,
-        and apply the filter independently to each chunk, by default 0.
+        If given, divide the data into chunks first where the time gaps in data are longer than this
+        length, and apply the filter independently to each chunk, by default 0.
     verbose: bool, optional
         Whether to print any text/warnings, by default True
 
     Returns
     -------
-    gerbls.pyDataContainer
+    cphot : gerbls.pyDataContainer
         Cleaned data.
-    np.array
+    cmask : numpy.ndarray
         Mask corresponding to valid cleaned data.
     """
     # Check optional dependencies
@@ -102,7 +103,7 @@ def find_flares(phot: gerbls.pyDataContainer,
     ----------
     phot : cinject.pyDataContainer
         Input data.
-    mag0 : float or np.ndarray, optional
+    mag0 : float or numpy.ndarray, optional
         Flux baseline to be subtracted before flare detection, by default 1.
 
     Returns

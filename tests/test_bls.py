@@ -9,7 +9,7 @@ def test_bls_basic(phot_test):
     correct_P = 1.37
 
     results = gerbls.run_bls(phot_test.rjd, phot_test.mag, phot_test.err, 
-                             min_period=0.4, max_period=10., t_samp=10/60/24)
+                             min_period=0.4, max_period=10., durations=[1/24], t_samp=10/60/24)
     
     # Check the validity of BLS results
     assert 'P' in results

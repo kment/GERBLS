@@ -48,17 +48,6 @@ void bin(double P,
     }
 }
 
-// Draw a sample from a distribution a <= x <= b such that p(x) = C * x^q
-double gdraw(double a, double b, double q)
-{
-    double x;
-    double C = 1 / std::max(pow(a, q), pow(b, q));
-    do {
-        x = grand(a, b);
-    } while (C * pow(x, q) >= grand(0, 1));
-    return x;
-}
-
 // Calculate the a/R ratio given P [days], M [Msun], R [Rsun]
 double get_aR_ratio(double P, double M, double R)
 {
@@ -112,12 +101,6 @@ double get_transit_dur(double P, double M, double R, double b)
     double aR_ratio = get_aR_ratio(P, M, R);
     double inc = get_inc(aR_ratio, b) * PI / 180;
     return P * asin(sqrt(1 - SQ(b)) / aR_ratio / sin(inc)) / PI;
-}
-
-// Generate a random number between a and b
-double grand(double a, double b)
-{
-    return a + (b - a) * rand() / RAND_MAX;
 }
 
 // Find the arithmetic mean of an array or a vector

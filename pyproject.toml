@@ -25,14 +25,16 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Astronomy",
 ]
 
-dependencies = ["numpy >= 1.20"]
+dependencies = [
+  "numpy >= 1.20",
+  "scipy",
+]
 
 [project.optional-dependencies]
 extras = [
   "batman-package",
   "matplotlib", 
   "pytest",
-  "scipy",
 ]
 
 [project.urls]
@@ -41,3 +43,6 @@ Repository = "https://github.com/kment/GERBLS.git"
 
 [tool.setuptools.dynamic]
 version = {attr = "gerbls.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

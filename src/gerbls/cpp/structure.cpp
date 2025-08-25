@@ -103,6 +103,15 @@ std::unique_ptr<DataContainer> DataContainer::clean_hw(double hw, bool *mask, in
     return data;
 }
 
+// Return a new object with the raw data values (but not the extra variables) copied over
+std::unique_ptr<DataContainer> DataContainer::duplicate() const
+{
+    std::unique_ptr<DataContainer> data(new DataContainer);
+    data->store(sec, rjd, mag, err, size);
+
+    return data;
+}
+
 // Return a boolean mask indicating any flare data
 // Flares are defined as a series (4) of consequtive bright 2-sigma deviants (in magn.)
 // double[size] mag0 is the baseline flux to be divided out before detection
@@ -480,3 +489,53 @@ double Target::Teff()
 {
     return 5772 * pow(L, 0.25) / pow(R, 0.5);
 }
+
+template <typename T> typename Vector2D<T>::Row Vector2D<T>::operator[](size_t row)
+{
+    return Row(&data[row * cols]);
+}
+
+// Explicit instantiations for Cython
+template Vector2D<double>::Row Vector2D<double>::operator[](size_t row);
+
+template <typename T> const typename Vector2D<T>::Row Vector2D<T>::operator[](size_t row) const
+{
+    return Row(const_cast<T *>(&data[row * cols]));
+}
+
+template <typename T> T &Vector2D<T>::Row::operator[](size_t col)
+{
+    return ptr[col];
+}
+
+template <typename T> const T &Vector2D<T>::Row::operator[](size_t col) const
+{
+    return ptr[col];
+}
+
+template <typename T> Vector2D<T>::Row::Row(T *start) : ptr(start) {};
+
+// Explicit instantiations for Cython
+// template Vector2D<double>::Row::Row(double *start);
+
+// Make a transposed copy
+template <typename T> Vector2D<T> Vector2D<T>::transpose() const
+{
+    Vector2D<T> transposed(cols, rows);
+
+    for (size_t r = 0; r < rows; ++r) {
+        for (size_t c = 0; c < cols; ++c) {
+            transposed.data[c * rows + r] = data[r * cols + c];
+        }
+    }
+
+    return transposed;
+}
+
+// Explicit instantiations for Cython
+template Vector2D<double> Vector2D<double>::transpose() const;
+
+template <typename T>
+Vector2D<T>::Vector2D(size_t rows, size_t cols) : data(rows * cols), rows(rows), cols(cols) {};
+// Explicit instantiations for Cython
+template Vector2D<double>::Vector2D(size_t rows, size_t cols);

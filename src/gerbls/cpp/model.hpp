@@ -56,7 +56,9 @@ struct BLSModel {
                     std::vector<size_t> &widths) const; // Set transit widths for period P
 
     // Virtual functions to be overwritten
-    virtual void run(bool verbose);
+    virtual size_t calculate_N_freq(); // Calculate N_freq() without running the model
+    virtual std::unique_ptr<BLSModel> duplicate() const; // Create a new similar object
+    virtual void run(bool verbose, bool full_results);
 
     // Required results for each tested frequency
     std::vector<double> dchi2, chi2_mag0, chi2_dmag, chi2_t0, chi2_dt;
@@ -97,7 +99,9 @@ struct BLSModel_bf : public BLSModel {
                 double max_duration_factor = 0.);
 
     // Methods to overwrite parent virtual functions
-    void run(bool verbose = true);
+    size_t calculate_N_freq() override;
+    std::unique_ptr<BLSModel> duplicate() const override;
+    void run(bool verbose = true, bool full_results = true) override;
 
     // Private methods
 private:
@@ -136,11 +140,36 @@ struct BLSModel_FFA : public BLSModel {
                  double ds_threshold = 0.,
                  size_t N_bins_transit_min = 0);
 
-    // Methods
-    template <typename T> void process_results(std::vector<BLSResult<T>> &results);
-    void run(bool verbose = true);
-    void run_double(bool verbose = true);
-    template <typename T> void run_prec(bool verbose = true);
+    // Methods to overwrite parent virtual functions
+    size_t calculate_N_freq() override;
+    std::unique_ptr<BLSModel> duplicate() const override;
+    void run(bool verbose = true, bool full_results = true) override;
+
+    // Additional methods
+    template <typename T>
+    void process_results(std::vector<BLSResult<T>> &results, bool full_results = true);
+    void run_double(bool verbose = true, bool full_results = true);
+    template <typename T> void run_prec(bool verbose = true, bool full_results = true);
+};
+
+// Noise BLS
+struct NoiseBLS {
+
+    // Settings
+    size_t N_sim = 0;
+    int selection_mode = 1;
+
+    // Pointer to the BLS model
+    std::unique_ptr<BLSModel> model;
+
+    // Noise BLS spectrum
+    std::vector<double> dchi2;
+
+    // Constructor
+    NoiseBLS(BLSModel &model);
+
+    // Other methods
+    std::vector<double> generate(size_t N_sim, int selection_mode = 0, bool verbose = true);
 };
 
 #endif /* MODEL_HPP_ */

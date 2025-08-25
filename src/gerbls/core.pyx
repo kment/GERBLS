@@ -1,18 +1,21 @@
 # cython: language_level = 3str
 # distutils: language = c++
 
-from gerbls.cgerbls cimport *
-from libc.stdlib cimport srand
+from .cgerbls cimport *
+from libc.math cimport exp, lgamma, log
 from libc.time cimport time as ctime
 from libcpp cimport bool as bool_t
 from libcpp.vector cimport vector
 import numpy as np
 cimport numpy as np
+from scipy.optimize import minimize
+from scipy.special import digamma
 
-# Initialize random number generator
-srand(ctime(NULL))
+# Numerical constants
+cdef const double LN2 = 0.69314718
 
 # These are just text inclusions
 include "blsmodel.pxi"
+include "noisebls.pxi"
 include "struct.pxi"
 include "utils.pxi"

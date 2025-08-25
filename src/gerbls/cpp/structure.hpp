@@ -37,6 +37,7 @@ struct DataContainer {
     void calculate_mag_frac();
     std::unique_ptr<DataContainer> clean(double P_rot = 0, bool *mask = nullptr, int N_flares = 3);
     std::unique_ptr<DataContainer> clean_hw(double hw, bool *mask = nullptr, int N_flares = 3);
+    std::unique_ptr<DataContainer> duplicate() const;
     std::unique_ptr<bool[]> find_flares(const double *mag0);
     std::unique_ptr<bool[]> find_flares();
     std::set<int> get_sectors();
@@ -65,10 +66,10 @@ size_t file_count_lines(std::string filename, const std::vector<int> *sectors = 
 // Structure to keep information about the star
 // Uses Solar values by default
 struct Target {
-    double M = 1.;   // Mass in Msun
-    double R = 1.;   // Radius in Run
-    double L = 1.; // Luminosity in Lsun
-    double u1 = 0.;      // Limb darkening coefficients
+    double M = 1.;  // Mass in Msun
+    double R = 1.;  // Radius in Run
+    double L = 1.;  // Luminosity in Lsun
+    double u1 = 0.; // Limb darkening coefficients
     double u2 = 0.;
     double L_comp = 0.; // Luminosity of binary companion as a fraction of L
     double P_rot = 0.;  // Rotation period
@@ -76,6 +77,39 @@ struct Target {
 
     double logg();
     double Teff();
+};
+
+// Efficiently store 2D data as a flattened vector
+// Warning: operator[][] does not check bounds
+template <typename T> class Vector2D {
+private:
+    //std::vector<T> data;
+    //std::size_t rows, cols;
+
+    struct Row {
+        T *ptr; // Pointer to the first element of the row
+
+        // Constructor
+        Row(T *start);
+
+        // Operators
+        T &operator[](size_t col);
+        const T &operator[](size_t col) const;
+    };
+
+public:
+    std::vector<T> data;
+    std::size_t rows, cols;
+
+    // Constructor
+    Vector2D(size_t rows, size_t cols);
+
+    // Operators
+    Row operator[](size_t row);
+    const Row operator[](size_t row) const;
+
+    // Methods
+    Vector2D<T> transpose() const; // Make a transposed copy
 };
 
 #endif /* STRUCTURE_HPP_ */

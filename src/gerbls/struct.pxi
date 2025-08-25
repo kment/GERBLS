@@ -5,6 +5,26 @@
 cdef class pyDataContainer:
     """
     GERBLS container for photometric data.
+
+    .. property:: err
+        :type: numpy.ndarray
+
+        Get the array of flux uncertainties.
+    
+    .. property:: mag
+        :type: numpy.ndarray
+
+        Get the array of fluxes.
+
+    .. property:: rjd
+        :type: numpy.ndarray
+
+        Get the array of observation times.
+    
+    .. property:: size
+        :type: int
+
+        Get the number of stored data points.
     """
     cdef DataContainer* cPtr
     cdef bool_t alloc           # Whether responsible for cPtr memory allocation
@@ -29,11 +49,11 @@ cdef class pyDataContainer:
 
         Parameters
         ----------
-        rjd : double[::1]
+        rjd : ArrayLike
             C-contiguous array of observation times.
-        mag : double[::1]
+        mag : ArrayLike
             C-contiguous array of fluxes.
-        err : double[::1]
+        err : ArrayLike
             C-contiguous array of flux uncertainties.
         """
         cdef Py_ssize_t i
@@ -57,7 +77,6 @@ cdef class pyDataContainer:
     
     @property
     def err(self):
-        """Array of flux uncertainties."""
         return np.asarray(self.view_err())
     
     def find_flares(self, double[:] mag0 = None):
@@ -73,7 +92,6 @@ cdef class pyDataContainer:
     
     @property
     def mag(self):
-        """Array of fluxes."""
         return np.asarray(self.view_mag())
     
     def mask(self, bool_t[:] mask):
@@ -111,7 +129,6 @@ cdef class pyDataContainer:
     
     @property
     def rjd(self):
-        """Array of observation times."""
         return np.asarray(self.view_rjd())
     
     def running_median(self, double hwidth):
@@ -134,7 +151,6 @@ cdef class pyDataContainer:
     
     @property
     def size(self):
-        """Number of data points stored."""
         return self.cPtr.size
     
     #def splfit(self, double P_rot, int M=50):
@@ -154,31 +170,31 @@ cdef class pyDataContainer:
         return data
     
     # Store data by making a copy
-    def store(self, double[:] rjd_, double[:] mag_, double[:] err_, bool_t convert_to_flux = False):
+    def store(self, double[:] rjd, double[:] mag, double[:] err, bool_t convert_to_flux = False):
         """
         Store data in the container by making a copy.
 
         Parameters
         ----------
-        rjd_ : double[:]
+        rjd : ArrayLike
             Array of observation times.
-        mag_ : double[:]
+        mag : ArrayLike
             Array of fluxes.
-        err_ : double[:]
+        err : ArrayLike
             Array of flux uncertainties.
-        convert_to_flux : bool
-            If True, fluxes are given as relative deviations in the form of ``-2.5 * log(flux)`` and
-            will be converted to ``flux`` before storing. By default False.
+        convert_to_flux : bool, optional
+            If True, fluxes are given as relative deviations in the form of :math:`-2.5 \log f`
+            and will be converted to relative fluxes :math:`f` before storing. By default False.
         """
         cdef Py_ssize_t i
-        cdef double[::1] rjd = np.ascontiguousarray(rjd_)
-        cdef double[::1] mag = np.ascontiguousarray(mag_)
-        cdef double[::1] err = np.ascontiguousarray(err_)
+        cdef double[::1] rjd_ = np.ascontiguousarray(rjd)
+        cdef double[::1] mag_ = np.ascontiguousarray(mag)
+        cdef double[::1] err_ = np.ascontiguousarray(err)
         if self.cPtr is NULL:
             self.allocate()
-        self.cPtr.store(&rjd[0], &mag[0], &err[0], rjd.shape[0])
+        self.cPtr.store(&rjd_[0], &mag_[0], &err_[0], rjd_.shape[0])
         if convert_to_flux:
-            for i in range(rjd.shape[0]):
+            for i in range(rjd_.shape[0]):
                 self.cPtr.mag[i] = 10.0**(-0.4 * self.cPtr.mag[i])
                 self.cPtr.err[i] = 0.4 * np.log(10.0) * self.cPtr.mag[i] * self.cPtr.err[i]
     
@@ -217,6 +233,65 @@ cdef class pyDataContainer:
             return <int [:self.cPtr.size]>self.cPtr.sec
 
 cdef class pyTarget:
+    """
+    A data structure containing information about a target star.
+
+    .. property:: L
+        :type: float
+
+        Get or set the stellar luminosity in Solar units.
+    
+    .. property:: L_comp
+        :type: float
+
+        Get or set the luminosity of a stellar companion in Solar units (if applicable).
+    
+    .. property:: logg
+        :type: float
+
+        Calculate the stellar surface gravity in :math:`cm/s^2`.
+    
+    .. property:: M
+        :type: float
+
+        Get or set the stellar mass in Solar units.
+    
+    .. property:: Prot
+        :type: float
+
+        Get or set the stellar rotation period.
+    
+    .. property:: Prot2
+        :type: float
+
+        Get or set the rotation period of a stellar companion (if applicable).
+    
+    .. property:: R
+        :type: float
+
+        Get or set the stellar radius in Solar units.
+    
+    .. property:: Teff
+        :type: float
+
+        Calculate the stellar effective temperature in K.
+    
+    .. property:: u
+        :type: float
+
+        Get a :class:`tuple` containing the quadratic limb darkening parameters :attr:`u1` and
+        :attr:`u2`.
+    
+    .. property:: u1
+        :type: float
+
+        Get or set the first quadratic limb darkening parameter.
+    
+    .. property:: u2
+        :type: float
+
+        Get or set the second quadratic limb darkening parameter.
+    """
     cdef Target* cPtr
     
     def __cinit__(self):
@@ -226,7 +301,13 @@ cdef class pyTarget:
         del self.cPtr
     
     def copy(self):
-        """Return a copy of the current object."""
+        """
+        Return a copy of the current object.
+        
+        Returns
+        -------
+        gerbls.pyTarget
+        """
         target = pyTarget()
         for attr in ["L", "L_comp", "M", "Prot", "Prot2", "R", "u1", "u2"]:
             setattr(target, attr, getattr(self, attr))
@@ -238,14 +319,14 @@ cdef class pyTarget:
 
         Parameters
         ----------
-        P : double
+        P : float
             Orbital period (in days).
-        dur : double
+        dur : float
             Total transit duration (in days).
         
         Returns
         -------
-        double
+        float
         """
         aR = get_aR_ratio(P, self.M, self.R)
         b2 = 1 - (np.pi * aR * dur / P)**2
@@ -257,12 +338,12 @@ cdef class pyTarget:
 
         Parameters
         ----------
-        P : double
+        P : float
             Orbital period (in days).
         
         Returns
         -------
-        double
+        float
         """
         return get_aR_ratio(P, self.M, self.R)
     
@@ -272,14 +353,14 @@ cdef class pyTarget:
 
         Parameters
         ----------
-        P : double
+        P : float
             Orbital period (in days).
-        b : double
+        b : float
             Impact parameter.
         
         Returns
         -------
-        double
+        float
         """
         return get_inc(P, self.M, self.R, b)
     
@@ -289,23 +370,19 @@ cdef class pyTarget:
 
         Parameters
         ----------
-        P : double
+        P : float
             Orbital period (in days).
-        b : double
+        b : float
             Impact parameter.
         
         Returns
         -------
-        double
+        float
         """
         return get_transit_dur(P, self.M, self.R, b)
 
     @property
     def L(self):
-        """
-        Stellar luminosity in Solar units.
-        Value can be set manually.
-        """
         return self.cPtr.L
     @L.setter
     def L(self, double L_):
@@ -313,10 +390,6 @@ cdef class pyTarget:
     
     @property
     def L_comp(self):
-        """
-        Luminosity of the binary companion in Solar units.
-        Value can be set manually.
-        """
         return self.cPtr.L_comp
     @L_comp.setter
     def L_comp(self, double L_):
@@ -324,15 +397,10 @@ cdef class pyTarget:
     
     @property
     def logg(self):
-        """Calculated stellar surface gravity in :math:`cm/s^2`."""
         return self.cPtr.logg()
     
     @property
     def M(self):
-        """
-        Stellar mass in Solar units.
-        Value can be set manually.
-        """
         return self.cPtr.M
     @M.setter
     def M(self, double M_):
@@ -340,10 +408,6 @@ cdef class pyTarget:
     
     @property
     def Prot(self):
-        """
-        Stellar rotation period.
-        Value can be set manually.
-        """
         return self.cPtr.P_rot
     @Prot.setter
     def Prot(self, double Prot_):
@@ -351,10 +415,6 @@ cdef class pyTarget:
     
     @property
     def Prot2(self):
-        """
-        Rotation period of the binary companion.
-        Value can be set manually.
-        """
         return self.cPtr.P_rot2
     @Prot2.setter
     def Prot2(self, double Prot2_):
@@ -362,10 +422,6 @@ cdef class pyTarget:
     
     @property
     def R(self):
-        """
-        Stellar radius in Solar units.
-        Value can be set manually.
-        """
         return self.cPtr.R
     @R.setter
     def R(self, double R_):
@@ -373,15 +429,10 @@ cdef class pyTarget:
         
     @property
     def u(self):
-        """A `tuple` containing the quadratic limb darkening parameters ``u1`` and ``u2``."""
         return [self.cPtr.u1, self.cPtr.u2]
     
     @property
     def u1(self):
-        """
-        First quadratic limb darkening parameter.
-        Value can be set manually.
-        """
         return self.cPtr.u1
     @u1.setter
     def u1(self, double u1):
@@ -389,10 +440,6 @@ cdef class pyTarget:
     
     @property
     def u2(self):
-        """
-        Second quadratic limb darkening parameter.
-        Value can be set manually.
-        """
         return self.cPtr.u2
     @u2.setter
     def u2(self, double u2):
@@ -400,5 +447,4 @@ cdef class pyTarget:
     
     @property
     def Teff(self):
-        """Calculated stellar effective temperature."""
         return self.cPtr.Teff()

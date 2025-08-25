@@ -26,7 +26,7 @@ def run_bls(time: npt.ArrayLike,
             err: npt.ArrayLike,
             min_period: float,
             max_period: float,
-            durations: list = [],
+            durations: list,
             t_samp: float = 0.):
     """
     A basic convenience function to generate a BLS spectrum.

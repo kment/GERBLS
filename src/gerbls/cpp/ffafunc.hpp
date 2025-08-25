@@ -82,4 +82,7 @@ size_t periodogram_length(size_t size,
 // Resample the light curve with a uniform sampling interval
 std::unique_ptr<DataContainer> resample_uniform(const DataContainer &data, double tsamp);
 
+// Calculate the number of data points in data resampled by resample_uniform()
+size_t resample_uniform_size(const DataContainer &data, double tsamp);
+
 #endif /* FFAFUNC_HPP_ */

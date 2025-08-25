@@ -1,13 +1,14 @@
 BLS generators
 ==================
 .. autoclass:: gerbls.pyBLSModel
+    :members:
 
 .. autoclass:: gerbls.pyBruteForceBLS
-    :inherited-members:
+    :members:
     :show-inheritance:
 
 .. autoclass:: gerbls.pyFastBLS
-    :inherited-members:
+    :members:
     :show-inheritance:
 
 .. autofunction:: gerbls.run_bls
