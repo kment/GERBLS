@@ -27,7 +27,7 @@ BLSModel::BLSModel(DataContainer &data_ref,
                    double f_min,
                    double f_max,
                    const Target *targetPtr,
-                   int duration_mode,
+                   DurationMode duration_mode,
                    const std::vector<double> *durations,
                    double min_duration_factor,
                    double max_duration_factor)
@@ -39,7 +39,7 @@ BLSModel::BLSModel(DataContainer &data_ref,
         this->f_min = f_min;
     if (f_max > 0)
         this->f_max = f_max;
-    if (duration_mode > 0)
+    if (duration_mode != DurationMode::None)
         this->duration_mode = duration_mode;
     if (durations != nullptr)
         this->durations = *durations;
@@ -75,21 +75,21 @@ std::tuple<double, double> BLSModel::get_duration_limits(double P) const
 
     switch (duration_mode) {
     // Constant duration limits
-    case 1:
+    case DurationMode::Constant:
         min_duration = min_duration_factor;
         max_duration = max_duration_factor;
         break;
 
     // Duration limits proportional to the orbital period
-    case 2:
+    case DurationMode::Fractional:
         min_duration = min_duration_factor * P;
         max_duration = max_duration_factor * P;
         break;
 
     // Duration limits proportional to the predicted physical transit duration
-    case 3:
+    case DurationMode::Physical:
         if (target == nullptr) {
-            throw std::runtime_error("Target must not be null with max_duration_mode == 3.");
+            throw std::runtime_error("Target must not be null with duration_mode == Physical.");
             return std::make_tuple(0, 0);
         }
         else {
@@ -101,9 +101,10 @@ std::tuple<double, double> BLSModel::get_duration_limits(double P) const
 
     // Invalid duration code
     default:
-        throw std::runtime_error("BLSModel::get_max_duration() called with invalid "
-                                 "duration_mode = " +
-                                 std::to_string(duration_mode));
+        throw std::runtime_error("BLSModel::get_duration_limits() called with invalid duration_mode"
+                                 " (int value " +
+                                 std::to_string(static_cast<int>(duration_mode)) +
+                                 ")");
         return std::make_tuple(0, 0);
     }
 
@@ -130,23 +131,23 @@ void BLSModel::set_widths(double P, double tau, std::vector<size_t> &widths) con
 
     switch (duration_mode) {
     // Constant duration limits
-    case 1:
+    case DurationMode::Constant:
         for (size_t i = 0; i < durations.size(); i++) {
             widths[i] = round(durations[i] / tau);
         }
         break;
 
     // Duration limits proportional to the orbital period
-    case 2:
+    case DurationMode::Fractional:
         for (size_t i = 0; i < durations.size(); i++) {
             widths[i] = round(durations[i] * P / tau);
         }
         break;
 
     // Duration limits proportional to the predicted physical transit duration
-    case 3:
+    case DurationMode::Physical:
         if (target == nullptr) {
-            throw std::runtime_error("Target must not be null with max_duration_mode == 3.");
+            throw std::runtime_error("Target must not be null with duration_mode == Physical.");
         }
         else {
             const double transit_dur = get_transit_dur(P, target->M, target->R, 0);
@@ -158,9 +159,10 @@ void BLSModel::set_widths(double P, double tau, std::vector<size_t> &widths) con
 
     // Invalid duration code
     default:
-        throw std::runtime_error("BLSModel::get_max_duration() called with invalid "
-                                 "duration_mode = " +
-                                 std::to_string(duration_mode));
+        throw std::runtime_error("BLSModel::set_widths() called with invalid duration_mode"
+                                 " (int value " +
+                                 std::to_string(static_cast<int>(duration_mode)) +
+                                 ")");
     }
 }
 
@@ -174,7 +176,7 @@ BLSModel_bf::BLSModel_bf(DataContainer &data_ref,
                          double dt_per_step,
                          double t_bins,
                          size_t N_bins_min,
-                         int duration_mode,
+                         DurationMode duration_mode,
                          double min_duration_factor,
                          double max_duration_factor) :
     BLSModel(data_ref,
@@ -209,7 +211,7 @@ BLSModel_bf::BLSModel_bf(DataContainer &data_ref,
                          const Target *targetPtr,
                          double t_bins,
                          size_t N_bins_min,
-                         int duration_mode,
+                         DurationMode duration_mode,
                          double min_duration_factor,
                          double max_duration_factor) :
     BLSModel(
@@ -350,7 +352,7 @@ BLSModel_FFA::BLSModel_FFA(DataContainer &data_ref,
                            double f_min,
                            double f_max,
                            const Target *targetPtr,
-                           int duration_mode,
+                           DurationMode duration_mode,
                            const std::vector<double> *durations,
                            double min_duration_factor,
                            double max_duration_factor,
@@ -487,7 +489,7 @@ template <typename T> void BLSModel_FFA::run_prec(bool verbose, bool full_result
 // Generate the noise spectrum
 // Currently only generates the necessary BLS spectra but does not analyze them to generate the
 // noise spectrum (this would need additional C++ libraries)
-std::vector<double> NoiseBLS::generate(size_t N_sim, int selection_mode, bool verbose)
+std::vector<double> NoiseBLS::generate(size_t N_sim, NoiseMode selection_mode, bool verbose)
 {
 
     // Make sure a model has been set up
@@ -495,7 +497,7 @@ std::vector<double> NoiseBLS::generate(size_t N_sim, int selection_mode, bool ve
         throw std::runtime_error("Cannot generate a noise spectrum due to an uninitialized model.");
 
     // Override default selection_mode if given
-    if (selection_mode)
+    if (selection_mode != NoiseMode::None)
         this->selection_mode = selection_mode;
 
     // Set up information and arrays
@@ -505,7 +507,7 @@ std::vector<double> NoiseBLS::generate(size_t N_sim, int selection_mode, bool ve
     dchi2.resize(N_freq);
 
     // Hold pointer to original data and allocate a temporary simulated data set
-    DataContainer* data_orig = model->data;
+    DataContainer *data_orig = model->data;
     std::unique_ptr<DataContainer> data_sim(data_orig->duplicate());
     model->data = data_sim.get();
 
@@ -544,7 +546,7 @@ std::vector<double> NoiseBLS::generate(size_t N_sim, int selection_mode, bool ve
         std::cout << " DONE" << std::endl;
         std::cout << "Total noise BLS runtime: " << rtime.count() << " sec" << std::endl;
     }
-    
+
     // Make model point to the original data again
     model->data = data_orig;
 

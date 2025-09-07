@@ -19,12 +19,17 @@ cdef class pyDataContainer:
     .. property:: rjd
         :type: numpy.ndarray
 
-        Get the array of observation times.
+        Alias of :attr:`time`.
     
     .. property:: size
         :type: int
 
         Get the number of stored data points.
+    
+    .. property:: time
+        :type: numpy.ndarray
+
+        Get the array of observation times.
     """
     cdef DataContainer* cPtr
     cdef bool_t alloc           # Whether responsible for cPtr memory allocation
@@ -45,7 +50,8 @@ cdef class pyDataContainer:
     cpdef void assign(self, double[::1] rjd, double[::1] mag, double[::1] err):
         """
         Assign data to the container without making a copy.
-        Warning: this can lead to crashes if the referenced arrays get deallocated.
+
+        .. caution:: Crashes may occur if any of the referenced arrays get deallocated.
 
         Parameters
         ----------
@@ -62,6 +68,7 @@ cdef class pyDataContainer:
         self.cPtr.set(&rjd[0], &mag[0], &err[0], rjd.shape[0])
     
     def clean(self, double P_rot = 0, int N_flares = 3):
+        """:meta private:"""
         cdef bool_t[::1] mask = np.zeros(self.cPtr.size, dtype = bool)
         data = pyDataContainer()
         data.cPtr = self.cPtr.clean(P_rot, &mask[0], N_flares).release()
@@ -69,6 +76,7 @@ cdef class pyDataContainer:
         return data, np.asarray(mask)
     
     def clean_hw(self, double hw, int N_flares = 3):
+        """:meta private:"""
         cdef bool_t[::1] mask = np.zeros(self.cPtr.size, dtype = bool)
         data = pyDataContainer()
         data.cPtr = self.cPtr.clean_hw(hw, &mask[0], N_flares).release()
@@ -80,6 +88,7 @@ cdef class pyDataContainer:
         return np.asarray(self.view_err())
     
     def find_flares(self, double[:] mag0 = None):
+        """:meta private:"""
         from clean import find_flares
         return find_flares(self, mag0)
     
@@ -95,6 +104,7 @@ cdef class pyDataContainer:
         return np.asarray(self.view_mag())
     
     def mask(self, bool_t[:] mask):
+        """:meta private:"""
         data = pyDataContainer()
         data.store_sec(self.sec[mask], 
                        self.rjd[mask], 
@@ -104,6 +114,7 @@ cdef class pyDataContainer:
         return data
     
     def phase_folded(self, double P_rot, double t_extend):
+        """:meta private:"""
         data = pyDataContainer()
         data.cPtr = self.cPtr.phase_folded(P_rot, t_extend).release()
         data.alloc = True
@@ -111,6 +122,7 @@ cdef class pyDataContainer:
     
     # Divide out a planetary signal
     def remove_planet(self, double[:] lc_model):
+        """:meta private:"""
         cdef double [::1] lc_model_ = np.ascontiguousarray(lc_model)
         cdef size_t i
         for i in range(self.cPtr.size):
@@ -118,6 +130,7 @@ cdef class pyDataContainer:
     
     # Rescale error bars in each sector such that std(mag)=median(err)
     def rescale_err(self):
+        """:meta private:"""
         cdef size_t i
         cdef int[::1] sec = self.view_sec()
         for sec_ in self.sectors:
@@ -132,13 +145,16 @@ cdef class pyDataContainer:
         return np.asarray(self.view_rjd())
     
     def running_median(self, double hwidth):
+        """:meta private:"""
         return np.asarray(self.cPtr.running_median(hwidth))
     
     def running_median_eval(self, double hwidth, double[:] t_eval):
+        """:meta private:"""
         cdef double[::1] t_ = np.ascontiguousarray(t_eval)
         return np.asarray(self.cPtr.running_median_eval(hwidth, &t_[0], t_.shape[0]))
     
     def running_median_per(self, double hwidth, double P_rot):
+        """:meta private:"""
         return np.asarray(self.cPtr.running_median_per(hwidth, P_rot))
     
     @property
@@ -161,6 +177,7 @@ cdef class pyDataContainer:
     #    return np.asarray(self.cPtr.splfit_eval(M, &t_[0], t_.shape[0]))
     
     def split_by_sector(self):
+        """:meta private:"""
         cdef dict data = {}
         for sector in self.sectors:
             mask = (self.sec == sector)
@@ -204,6 +221,7 @@ cdef class pyDataContainer:
                   double[:] mag_,
                   double[:] err_, 
                   bool_t convert_to_flux = False):
+        """:meta private:"""
         cdef Py_ssize_t i
         self.store(rjd_, mag_, err_, convert_to_flux)
         for i in range(len(sec_)):
@@ -215,8 +233,13 @@ cdef class pyDataContainer:
                     double[:] mag_,
                     double[:] err_, 
                     bool_t convert_to_flux = False):
+        """:meta private:"""
         self.store_sec(np.asarray(sec_, dtype=np.int32), rjd_, mag_, err_, convert_to_flux)
     
+    @property
+    def time(self):
+        return np.asarray(self.view_rjd())
+
     cdef double [::1] view_err(self):
         return <double [:self.cPtr.size]>self.cPtr.err
     
@@ -277,7 +300,7 @@ cdef class pyTarget:
         Calculate the stellar effective temperature in K.
     
     .. property:: u
-        :type: float
+        :type: tuple
 
         Get a :class:`tuple` containing the quadratic limb darkening parameters :attr:`u1` and
         :attr:`u2`.
@@ -292,13 +315,27 @@ cdef class pyTarget:
 
         Get or set the second quadratic limb darkening parameter.
     """
-    cdef Target* cPtr
+    cdef Target* ptr            # Pointer to C object (if mutable)
+    cdef const Target* cptr     # Pointer to const C object
+    cdef bool_t alloc           # Whether responsible for C-level memory allocation
     
     def __cinit__(self):
-        self.cPtr = new Target()
+        self.alloc = False
     
     def __dealloc__(self):
-        del self.cPtr
+        if self.alloc:
+            del self.ptr
+    
+    def __init__(self):
+        self.alloc = True
+        self.ptr = new Target()
+        self.cptr = <const Target*> self.ptr
+    
+    cdef void assert_allocated(self):
+        assert self.cptr is not NULL, "Target object has not been allocated."
+    
+    cdef void assert_mutable(self):
+        assert self.ptr is not NULL, "Target object is not mutable."
     
     def copy(self):
         """
@@ -308,7 +345,7 @@ cdef class pyTarget:
         -------
         gerbls.pyTarget
         """
-        target = pyTarget()
+        cdef pyTarget target = pyTarget()
         for attr in ["L", "L_comp", "M", "Prot", "Prot2", "R", "u1", "u2"]:
             setattr(target, attr, getattr(self, attr))
         return target
@@ -332,6 +369,20 @@ cdef class pyTarget:
         b2 = 1 - (np.pi * aR * dur / P)**2
         return (b2**0.5 if b2 > 0 else 0.)
     
+    @staticmethod
+    cdef pyTarget from_const_ptr(const Target* ptr):
+        cdef pyTarget target = pyTarget.__new__(pyTarget)
+        target.cptr = ptr
+        return target
+
+    @staticmethod
+    cdef pyTarget from_ptr(Target* ptr, bool_t alloc = False):
+        cdef pyTarget target = pyTarget.__new__(pyTarget)
+        target.ptr = ptr
+        target.cptr = <const Target*> ptr
+        target.alloc = alloc
+        return target
+
     def get_aR_ratio(self, double P):
         """
         Estimate the semi-major axis to stellar radius ratio from transit observables.
@@ -383,68 +434,87 @@ cdef class pyTarget:
 
     @property
     def L(self):
-        return self.cPtr.L
+        self.assert_allocated()
+        return self.cptr.L
     @L.setter
-    def L(self, double L_):
-        self.cPtr.L = L_
+    def L(self, double L):
+        self.assert_mutable()
+        self.ptr.L = L
     
     @property
     def L_comp(self):
-        return self.cPtr.L_comp
+        self.assert_allocated()
+        return self.cptr.L_comp
     @L_comp.setter
-    def L_comp(self, double L_):
-        self.cPtr.L_comp = L_
+    def L_comp(self, double L):
+        self.assert_mutable()
+        self.ptr.L_comp = L
     
     @property
     def logg(self):
-        return self.cPtr.logg()
+        self.assert_allocated()
+        return self.cptr.logg()
     
     @property
     def M(self):
-        return self.cPtr.M
+        self.assert_allocated()
+        return self.cptr.M
     @M.setter
-    def M(self, double M_):
-        self.cPtr.M = M_
+    def M(self, double M):
+        self.assert_mutable()
+        self.ptr.M = M
     
     @property
     def Prot(self):
-        return self.cPtr.P_rot
+        self.assert_allocated()
+        return self.cptr.P_rot
     @Prot.setter
-    def Prot(self, double Prot_):
-        self.cPtr.P_rot = Prot_
+    def Prot(self, double Prot):
+        self.assert_mutable()
+        self.ptr.P_rot = Prot
     
     @property
     def Prot2(self):
-        return self.cPtr.P_rot2
+        self.assert_allocated()
+        return self.cptr.P_rot2
     @Prot2.setter
-    def Prot2(self, double Prot2_):
-        self.cPtr.P_rot2 = Prot2_
+    def Prot2(self, double Prot2):
+        self.assert_mutable()
+        self.ptr.P_rot2 = Prot2
     
     @property
     def R(self):
-        return self.cPtr.R
+        self.assert_allocated()
+        return self.cptr.R
     @R.setter
-    def R(self, double R_):
-        self.cPtr.R = R_
+    def R(self, double R):
+        self.assert_mutable()
+        self.ptr.R = R
         
     @property
     def u(self):
-        return [self.cPtr.u1, self.cPtr.u2]
+        self.assert_allocated()
+        return [self.cptr.u1, self.cptr.u2]
     
     @property
     def u1(self):
-        return self.cPtr.u1
+        self.assert_allocated()
+        return self.cptr.u1
     @u1.setter
     def u1(self, double u1):
-        self.cPtr.u1 = u1
+        self.assert_mutable()
+        self.ptr.u1 = u1
     
     @property
     def u2(self):
-        return self.cPtr.u2
+        self.assert_allocated()
+        return self.cptr.u2
     @u2.setter
     def u2(self, double u2):
-        self.cPtr.u2 = u2
+        self.assert_mutable()
+        self.ptr.u2 = u2
     
     @property
     def Teff(self):
-        return self.cPtr.Teff()
+        self.assert_allocated()
+        return self.cptr.Teff()

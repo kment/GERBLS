@@ -479,13 +479,13 @@ size_t file_count_lines(std::string filename, const std::vector<int> *sectors)
 }
 
 // Estimate the surface gravity (in cm/s2)
-double Target::logg()
+double Target::logg() const
 {
     return log10(M) - 2 * log10(R) + 4.437;
 }
 
 // Estimate the effective temperature
-double Target::Teff()
+double Target::Teff() const
 {
     return 5772 * pow(L, 0.25) / pow(R, 0.5);
 }

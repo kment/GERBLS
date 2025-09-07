@@ -8,17 +8,34 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 
 cdef extern from "cpp/ffafunc.hpp":
+    size_t periodogram_length(size_t, double, double, double, bool, double, double)
     unique_ptr[DataContainer] resample_uniform(DataContainer, double)
 
 cdef extern from "cpp/model.hpp":
+    cdef enum class DurationMode:
+        None
+        Constant
+        Fractional
+        Physical
+    
+    cdef enum class NoiseMode:
+        None
+        FittedChi2Dist
+        MaximumDChi2
+
     cdef cppclass BLSModel:
-        int max_duration_mode
+        const Target* target
+        double f_min
+        double f_max
+        double min_duration_factor
         double max_duration_factor
+        DurationMode duration_mode
         vector[double] chi2_dmag
         vector[double] chi2_dt
         vector[double] chi2_mag0
         vector[double] chi2_t0
         vector[double] dchi2
+        vector[double] durations
         vector[double] freq
         vector[size_t] N_bins
         
@@ -26,9 +43,24 @@ cdef extern from "cpp/model.hpp":
         void run(bool_t, bool_t)
     
     cdef cppclass BLSModel_bf(BLSModel):
-        BLSModel_bf(
-            DataContainer, double, double, Target*, double, double, size_t, int, double, double)
-        BLSModel_bf(DataContainer, vector[double], Target*, double, size_t, int, double, double)
+        BLSModel_bf(DataContainer,
+                    double,
+                    double,
+                    const Target*,
+                    double,
+                    double,
+                    size_t,
+                    DurationMode,
+                    double,
+                    double)
+        BLSModel_bf(DataContainer,
+                    vector[double],
+                    const Target*,
+                    double,
+                    size_t,
+                    DurationMode,
+                    double,
+                    double)
     
     cdef cppclass BLSModel_FFA(BLSModel):
         double t_samp
@@ -38,8 +70,8 @@ cdef extern from "cpp/model.hpp":
         BLSModel_FFA(DataContainer,
                      double,
                      double,
-                     Target*,
-                     int,
+                     const Target*,
+                     DurationMode,
                      const vector[double]*,
                      double,
                      double,
@@ -51,12 +83,14 @@ cdef extern from "cpp/model.hpp":
         void run_double(bool_t, bool_t)
     
     cdef cppclass NoiseBLS:
+        NoiseMode selection_mode
+        size_t N_sim
         unique_ptr[BLSModel] model
         vector[double] dchi2
 
         NoiseBLS(BLSModel)
 
-        vector[double] generate(size_t, int, bool_t)
+        vector[double] generate(size_t, NoiseMode, bool_t)
 
 cdef extern from "cpp/physfunc.hpp":
     double get_aR_ratio(double, double, double)
@@ -97,8 +131,8 @@ cdef extern from "cpp/structure.hpp":
         double P_rot
         double P_rot2
         
-        double logg()
-        double Teff()
+        double logg() const
+        double Teff() const
     
     cdef cppclass Vector2D_double "Vector2D<double>":
         vector[double] data

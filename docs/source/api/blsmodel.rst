@@ -11,4 +11,7 @@ BLS generators
     :members:
     :show-inheritance:
 
+.. autoclass:: gerbls.pyNoiseBLS
+    :members:
+
 .. autofunction:: gerbls.run_bls

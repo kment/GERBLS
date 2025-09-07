@@ -75,8 +75,8 @@ struct Target {
     double P_rot = 0.;  // Rotation period
     double P_rot2 = 0.; // Second rotation period (binary companion)
 
-    double logg();
-    double Teff();
+    double logg() const;
+    double Teff() const;
 };
 
 // Efficiently store 2D data as a flattened vector

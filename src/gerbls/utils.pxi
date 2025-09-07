@@ -2,6 +2,56 @@
 # Various utility functions to be included in gerbls.pyx
 # See gerbls.pyx for module imports
 
+def calculate_number_of_periods(pyDataContainer data not None,
+                                double min_period,
+                                double max_period,
+                                double t_samp = 0.,
+                                bool_t downsample = False,
+                                double ds_invpower = 3.,
+                                double ds_threshold = 1.1):
+    """
+    Calculate the number of tested periods in a fast-folded BLS (pyFastBLS).
+
+    Parameters
+    ----------
+    data : gerbls.pyDataContainer
+        Input data.
+    min_period : float
+        Minimum searched orbital period.
+    max_period : float
+        Maximum searched orbital period.
+    t_samp : float, optional
+        Desired initial time sampling of the data, by default 0.
+        If 0, the median time cadence of the input data will be used instead.
+    downsample : bool, optional
+        Whether to automatically downsample the data at longer periods, by default False.
+    downsample_invpower : float, optional
+        Affects the rate of downsampling, by default 3.
+    downsample_threshold : float, optional
+        Affects the threshold that triggers downsampling, by default 1.1.
+    
+    Returns
+    -------
+    int
+    """
+    # Perform input checks
+    assert data.size > 0, "data cannot be empty."
+    assert max_period > min_period > 0, "Invalid min and/or max period."
+    assert min_period >= t_samp >= 0, "t_samp must be between 0 and min_period."
+
+    if t_samp == 0:
+        t_samp = np.median(np.diff(data.rjd))
+        print(f"t_samp set to the median cadence of input data: {t_samp*24*60:.2f} minutes.",
+              flush=True)
+
+    return periodogram_length(data.size,
+                              t_samp,
+                              min_period,
+                              max_period,
+                              downsample,
+                              ds_invpower,
+                              ds_threshold)
+
 # Loss (negative log-likelihood) and gradient vector for a sample drawn from a chi-squared
 # distribution.
 cdef tuple chi2_loss_and_grad_exp(double[:] x, double[:] sample):

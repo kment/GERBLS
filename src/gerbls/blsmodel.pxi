@@ -2,19 +2,61 @@
 # BLS model and analyzer to be included in gerbls.pyx
 # See gerbls.pyx for module imports
 
+# Allowed duration modes for BLS models
+cdef dict allowed_duration_modes = {'': DurationMode.None,
+                                    'constant': DurationMode.Constant,
+                                    'fractional': DurationMode.Fractional,
+                                    'physical': DurationMode.Physical}
+
 cdef class pyBLSModel:
     """
     Base class for BLS model generators. Should not be created directly.
+
+    .. property:: duration_mode
+        :type: str
+
+        Get the current `duration_mode` value, which affects how the maximum tested transit duration
+        is determined at each orbital period.
+    
+    .. property:: durations
+        :type: list
+
+        Get the list of tested transit durations, if specified during model setup.
 
     .. property:: freq
         :type: numpy.ndarray
 
         Get the array of tested frequencies.
     
+    .. property:: max_duration_factor
+        :type: float
+
+        Get the `max_duration_factor` that affects the maximum tested transit duration.
+    
+    .. property:: max_period
+        :type: float
+
+        Get the maximum tested orbital period.
+    
+    .. property:: min_duration_factor
+        :type: float
+
+        Get the `min_duration_factor` that affects the minimum tested transit duration.
+    
+    .. property:: min_period
+        :type: float
+
+        Get the minimum tested orbital period.
+    
     .. property:: N_freq
         :type: int
 
         Get the number of tested frequencies.
+    
+    .. property:: target
+        :type: pyTarget | None
+
+        Get a non-mutable reference to the stellar parameters object, if specified.
     """
     cdef BLSModel* cPtr
     cdef bool_t alloc           # Whether responsible for memory allocation
@@ -27,15 +69,56 @@ cdef class pyBLSModel:
         if self.alloc and type(self) is pyBLSModel:
             del self.cPtr
     
+    cdef void assert_setup(self):
+        assert self.cPtr is not NULL, "Model needs to be set up first."
+
+    @property
+    def duration_mode(self):
+        self.assert_setup()
+        return next((k for k, v in allowed_duration_modes.items() if v == self.cPtr.duration_mode), 
+                    "")
+
+    cdef DurationMode duration_mode_enum(self, str duration_mode):
+        """Convert a string representation of a duration mode to its enum counterpart."""
+        assert (
+            duration_mode in allowed_duration_modes
+            ), f"duration_mode must be one of: {allowed_duration_modes.keys()}"
+        
+        return allowed_duration_modes[duration_mode]
+
+    @property
+    def durations(self):
+        self.assert_setup()
+        return list(<double [:self.cPtr.durations.size()]>self.cPtr.durations.data())
+
     @property
     def freq(self):
+        self.assert_setup()
         return np.asarray(self.view_freq())
     
-    # def get_max_duration(self, double P):
-    #    return self.cPtr.get_max_duration(P)
+    @property
+    def max_duration_factor(self):
+        self.assert_setup()
+        return 1./self.cPtr.max_duration_factor
+    
+    @property
+    def max_period(self):
+        self.assert_setup()
+        return 1./self.cPtr.f_min
+    
+    @property
+    def min_duration_factor(self):
+        self.assert_setup()
+        return 1./self.cPtr.min_duration_factor
+
+    @property
+    def min_period(self):
+        self.assert_setup()
+        return 1./self.cPtr.f_max
     
     @property
     def N_freq(self):
+        self.assert_setup()
         return self.cPtr.N_freq()
     
     def run(self, bool_t verbose = True):
@@ -51,7 +134,16 @@ cdef class pyBLSModel:
         -------
         None
         """
+        self.assert_setup()
         self.cPtr.run(verbose, True)
+
+    @property
+    def target(self):
+        self.assert_setup()
+        if self.cPtr.target is NULL:
+            return None
+        else:
+            return pyTarget.from_const_ptr(self.cPtr.target)
 
     cdef size_t [::1] view_bins(self):
         return <size_t [:self.N_freq]>self.cPtr.N_bins.data()
@@ -103,6 +195,9 @@ cdef class pyBruteForceBLS(pyBLSModel):
         """
         Set up the BLS generation.
 
+        .. caution:: Only references to ``data`` and ``target`` are stored. Crashes or unexpected
+            results may occur if the referenced objects get deallocated.
+
         Parameters
         ----------
         data : gerbls.pyDataContainer
@@ -134,7 +229,16 @@ cdef class pyBruteForceBLS(pyBLSModel):
         -------
         None
         """
-        cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        # Perform input checks
+        assert data.size > 0, "data cannot be empty."
+        assert max_period > min_period > 0, "Invalid min and/or max period."
+        assert dt_per_step >= 0, "dt_per_step cannot be negative."
+        assert t_bins >= 0, "t_bins cannot be negative."
+        assert N_bins_min >= 0, "N_bins_min cannot be negative."
+        assert min_duration_factor >= 0, "min_duration_factor cannot be negative."
+        assert max_duration_factor >= 0, "max_duration_factor cannot be negative."
+
+        cdef const Target* targetPtr = (<const Target *>NULL if target == None else target.cptr)
         self.dPtr = new BLSModel_bf(data.cPtr[0],
                                     1/max_period,
                                     1/min_period,
@@ -142,7 +246,7 @@ cdef class pyBruteForceBLS(pyBLSModel):
                                     dt_per_step,
                                     t_bins,
                                     N_bins_min,
-                                    convert_duration_mode(duration_mode),
+                                    self.duration_mode_enum(duration_mode),
                                     min_duration_factor,
                                     max_duration_factor)
         self.cPtr = self.dPtr
@@ -160,6 +264,9 @@ cdef class pyBruteForceBLS(pyBLSModel):
                         double max_duration_factor = 0.):
         """
         Set up the BLS generation with a predefined array of orbital frequencies.
+
+        .. caution:: Only references to ``data`` and ``target`` are stored. Crashes or unexpected
+            results may occur if the referenced objects get deallocated.
 
         Parameters
         ----------
@@ -186,13 +293,21 @@ cdef class pyBruteForceBLS(pyBLSModel):
         -------
         None
         """
-        cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        # Perform input checks
+        assert data.size > 0, "data cannot be empty."
+        assert len(freq_) > 0, "List of frequencies cannot be empty."
+        assert t_bins >= 0, "t_bins cannot be negative."
+        assert N_bins_min >= 0, "N_bins_min cannot be negative."
+        assert min_duration_factor >= 0, "min_duration_factor cannot be negative."
+        assert max_duration_factor >= 0, "max_duration_factor cannot be negative."
+
+        cdef const Target* targetPtr = (<const Target *>NULL if target == None else target.cptr)
         self.dPtr = new BLSModel_bf(data.cPtr[0],
                                     list(freq_),
                                     targetPtr,
                                     t_bins,
                                     N_bins_min,
-                                    convert_duration_mode(duration_mode),
+                                    self.duration_mode_enum(duration_mode),
                                     min_duration_factor,
                                     max_duration_factor)
         self.cPtr = self.dPtr
@@ -231,6 +346,7 @@ cdef class pyFastBLS(pyBLSModel):
     
     @property
     def rdata(self):
+        self.assert_setup()
         return pyDataContainer.from_ptr(self.dPtr.rdata.get(), False)
     
     def run_double(self, bool_t verbose = True):
@@ -249,7 +365,7 @@ cdef class pyFastBLS(pyBLSModel):
         self.dPtr.run_double(verbose, True)
     
     def setup(self,
-              pyDataContainer data,
+              pyDataContainer data not None,
               double min_period,
               double max_period,
               pyTarget target = None,
@@ -264,6 +380,9 @@ cdef class pyFastBLS(pyBLSModel):
               double downsample_threshold = 1.1):
         """
         Set up the BLS generation.
+
+        .. caution:: Only references to ``data`` and ``target`` are stored. Crashes or unexpected
+            results may occur if the referenced objects get deallocated.
 
         Parameters
         ----------
@@ -302,7 +421,14 @@ cdef class pyFastBLS(pyBLSModel):
         -------
         None
         """
-        cdef Target* targetPtr = (<Target *>NULL if target == None else target.cPtr)
+        # Perform input checks
+        assert data.size > 0, "data cannot be empty."
+        assert max_period > min_period > 0, "Invalid min and/or max period."
+        assert t_samp >= 0, "t_samp cannot be negative."
+        assert min_duration_factor >= 0, "min_duration_factor cannot be negative."
+        assert max_duration_factor >= 0, "max_duration_factor cannot be negative."
+
+        cdef const Target* targetPtr = (<const Target *>NULL if target == None else target.cptr)
         if t_samp == 0:
             t_samp = np.median(np.diff(data.rjd))
             if verbose:
@@ -314,7 +440,7 @@ cdef class pyFastBLS(pyBLSModel):
                                      1./max_period,
                                      1./min_period,
                                      targetPtr,
-                                     convert_duration_mode(duration_mode),
+                                     self.duration_mode_enum(duration_mode),
                                      (&durations if durations.size() else NULL),
                                      min_duration_factor,
                                      max_duration_factor,
@@ -327,13 +453,17 @@ cdef class pyFastBLS(pyBLSModel):
     
     @property
     def t_samp(self):
+        self.assert_setup()
         return self.dPtr.t_samp
     @t_samp.setter
     def t_samp(self, double value):
+        self.assert_setup()
+        assert value > 0, "t_samp must be positive."
         self.dPtr.t_samp = value
     
     @property
     def time_spent(self):
+        self.assert_setup()
         return np.asarray(<double [:self.dPtr.time_spent.size()]>self.dPtr.time_spent.data())
 
 cdef class pyBLSAnalyzer:
@@ -341,6 +471,9 @@ cdef class pyBLSAnalyzer:
     pyBLSAnalyzer(model)
 
     BLS results analyzer.
+
+    .. caution:: Only a reference to ``model`` is stored. Crashes or unexpected results may occur if
+        the referenced object gets deallocated.
     
     Parameters
     ----------
@@ -391,10 +524,11 @@ cdef class pyBLSAnalyzer:
     cdef double [:] _mag0
     cdef bool_t [:] _mask
     cdef double [:] _t0
-    cdef int N_freq
+    cdef size_t N_freq
     cdef double t_samp
     
-    def __cinit__(self, pyBLSModel model):
+    def __cinit__(self, pyBLSModel model not None):
+        model.assert_setup()
         self._bins = model.view_bins()
         self._dchi2 = model.view_dchi2()
         self._dmag = model.view_dmag()
@@ -461,8 +595,12 @@ cdef class pyBLSAnalyzer:
         
         Returns
         -------
-        List of :class:`gerbls.pyBLSResult` corresponding to the identified models.
+        list
+            List of :class:`gerbls.pyBLSResult` corresponding to the identified models.
         """
+        # Perform input checks
+        assert unmaskf > 0, "unmaskf must be positive."
+
         self.initialize_mask()
         return [self.generate_next_model(unmaskf) for _ in range(N_models)]
     
@@ -546,7 +684,11 @@ cdef class pyBLSResult:
     cdef readonly double t0
     cdef readonly double dur
 
-    def __cinit__(self, pyBLSAnalyzer blsa, size_t index):
+    def __cinit__(self, pyBLSAnalyzer blsa not None, size_t index):
+
+        assert blsa.N_freq > 0, "BLS model has no generated frequencies."
+        assert 0 <= index < blsa.N_freq, "index out of bounds for the BLS model."
+
         self.P = blsa.P[index]
         self.dchi2 = blsa.dchi2[index]
         self.mag0 = blsa.mag0[index]
@@ -568,7 +710,7 @@ cdef class pyBLSResult:
     def snr_from_dchi2(self):
         return self.dchi2**0.5
     
-    def get_dmag_err(self, pyDataContainer phot):
+    def get_dmag_err(self, pyDataContainer phot not None):
         """
         Calculate the uncertainty in :attr:`dmag` (transit depth).
 
@@ -581,12 +723,15 @@ cdef class pyBLSResult:
         -------
         float
         """
+        # Perform input checks
+        assert phot.size > 0, "Data container cannot be empty."
+
         cdef bool_t[:] mask = self.get_transit_mask(phot.rjd)
         cdef double err_in = np.sum(phot.err[mask]**-2)**-0.5
         cdef double err_out = np.sum(phot.err[invert_mask(mask)]**-2)**-0.5
         return (err_in**2 + err_out**2)**0.5
 
-    def get_SNR(self, pyDataContainer phot):
+    def get_SNR(self, pyDataContainer phot not None):
         """
         Calculate the transit SNR from uncertainty in :attr:`dmag`.
 
@@ -599,6 +744,9 @@ cdef class pyBLSResult:
         -------
         float
         """
+        # Perform input checks
+        assert phot.size > 0, "Data container cannot be empty."
+
         return self.dmag / self.get_dmag_err(phot)
 
     def get_transit_mask(self, double[:] t):
@@ -615,18 +763,7 @@ cdef class pyBLSResult:
         numpy.ndarray
             Boolean array with True values corresponding to in-transit data points.
         """
-        return (abs((np.array(t) - self.t0 + self.P / 2) % self.P - self.P / 2) < self.dur / 2)
+        # Perform input checks
+        assert len(t) > 0, "No observation times given."
 
-cdef int convert_duration_mode(str duration_mode):
-    """
-    Converts a string representation of a duration mode to its integer counterpart.
-    """
-    cdef dict allowed_duration_modes = {'': 0,
-                                        'constant': 1,
-                                        'fractional': 2,
-                                        'physical': 3}
-    assert (
-        duration_mode in allowed_duration_modes
-        ), f"duration_mode must be one of: {allowed_duration_modes.keys()}"
-    
-    return allowed_duration_modes[duration_mode]
+        return (abs((np.array(t) - self.t0 + self.P / 2) % self.P - self.P / 2) < self.dur / 2)

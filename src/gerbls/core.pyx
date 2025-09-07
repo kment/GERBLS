@@ -10,6 +10,7 @@ import numpy as np
 cimport numpy as np
 from scipy.optimize import minimize
 from scipy.special import digamma
+from scipy.stats import chi2
 
 # Numerical constants
 cdef const double LN2 = 0.69314718

@@ -271,7 +271,7 @@ std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
         }
 
         // Pre-calculate tested transit widths if they are constant and explicitly defined
-        if (model.explicit_durations() && model.duration_mode == 1) {
+        if (model.explicit_durations() && model.duration_mode == DurationMode::Constant) {
             model.set_widths(0., tau, widths);
         }
 
@@ -291,7 +291,7 @@ std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
             auto block2 = riptide::ConstBlock<T>(ffawts, rows_eval, bins);
 
             if (model.explicit_durations()) {
-                if (model.duration_mode != 1) {
+                if (model.duration_mode != DurationMode::Constant) {
                     model.set_widths((bins + 1) * tau, tau, widths);
                 }
                 chisq_2d<T>(block1, block2, widths, presult);

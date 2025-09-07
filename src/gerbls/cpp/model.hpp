@@ -16,16 +16,20 @@
 // Forward declarations
 template <typename T> struct BLSResult;
 
+// Scoped enumerations
+enum class DurationMode { None, Constant, Fractional, Physical };
+enum class NoiseMode { None, FittedChi2Dist, MaximumDChi2 };
+
 // BLS model (base class)
 struct BLSModel {
 
     // Settings
-    double f_min = 0.025;             // Minimum search frequency
-    double f_max = 5;                 // Maximum search frequency
-    int duration_mode = 2;            // Affects tested transit durations
-    double min_duration_factor = 0;   // Affects get_min_duration()
-    double max_duration_factor = 0.1; // Affects get_max_duration()
-    std::vector<double> durations;    // List of transit durations to test
+    double f_min = 0.025;                                  // Minimum search frequency
+    double f_max = 5;                                      // Maximum search frequency
+    DurationMode duration_mode = DurationMode::Fractional; // Affects tested transit durations
+    double min_duration_factor = 0;                        // Affects get_min_duration()
+    double max_duration_factor = 0.1;                      // Affects get_max_duration()
+    std::vector<double> durations;                         // List of transit durations to test
 
     // Pointer to associated data
     DataContainer *data = nullptr;
@@ -41,7 +45,7 @@ struct BLSModel {
              double f_min = 0.,
              double f_max = 0.,
              const Target *targetPtr = nullptr,
-             int duration_mode = 0,
+             DurationMode duration_mode = DurationMode::None,
              const std::vector<double> *durations = nullptr,
              double min_duration_factor = 0.,
              double max_duration_factor = 0.);
@@ -86,7 +90,7 @@ struct BLSModel_bf : public BLSModel {
                 double dt_per_step = 0.,
                 double t_bins = 0.,
                 size_t N_bins_min = 0,
-                int duration_mode = 0,
+                DurationMode duration_mode = DurationMode::None,
                 double min_duration_factor = 0.,
                 double max_duration_factor = 0.);
     BLSModel_bf(DataContainer &data_ref,
@@ -94,7 +98,7 @@ struct BLSModel_bf : public BLSModel {
                 const Target *targetPtr = nullptr,
                 double t_bins = 0.,
                 size_t N_bins_min = 0,
-                int duration_mode = 0,
+                DurationMode duration_mode = DurationMode::None,
                 double min_duration_factor = 0.,
                 double max_duration_factor = 0.);
 
@@ -130,7 +134,7 @@ struct BLSModel_FFA : public BLSModel {
                  double f_min = 0.,
                  double f_max = 0.,
                  const Target *targetPtr = nullptr,
-                 int duration_mode = 0,
+                 DurationMode duration_mode = DurationMode::None,
                  const std::vector<double> *durations = nullptr,
                  double min_duration_factor = 0.,
                  double max_duration_factor = 0.,
@@ -157,7 +161,7 @@ struct NoiseBLS {
 
     // Settings
     size_t N_sim = 0;
-    int selection_mode = 1;
+    NoiseMode selection_mode = NoiseMode::MaximumDChi2;
 
     // Pointer to the BLS model
     std::unique_ptr<BLSModel> model;
@@ -169,7 +173,7 @@ struct NoiseBLS {
     NoiseBLS(BLSModel &model);
 
     // Other methods
-    std::vector<double> generate(size_t N_sim, int selection_mode = 0, bool verbose = true);
+    std::vector<double> generate(size_t N_sim, NoiseMode selection_mode, bool verbose = true);
 };
 
 #endif /* MODEL_HPP_ */
