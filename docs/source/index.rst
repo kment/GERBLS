@@ -17,9 +17,9 @@ GERBLS can outperform popular brute-force BLS implementations such as
    :caption: Contents:
 
    install
+   getting_started
    basic_usage
    examples/fastbls
    api/index
 
 * :ref:`genindex`
-* :ref:`search`

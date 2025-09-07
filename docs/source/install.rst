@@ -22,18 +22,22 @@ needs.
 
 Option 1: Full install (recommended)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The full install includes a small number of additional dependencies (such as `SciPy`) that enable
+The full install includes a small number of additional dependencies (such as `batman`_) that enable
 the full functionality of GERBLS. To do a full install, simply run: ::
 
     pip install "gerbls[extras]"
 
+.. _batman: http://lkreidberg.github.io/batman
+
 Option 2: Minimal install
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 This version is sufficient to generate the BLS spectra, but many of the additional features will not
-work. The only additional dependency is `NumPy`_ (as well as a build-time dependency of `Cython`_,
-as mentioned above). The minimal version is installed by running: ::
+work. The only required dependencies are `NumPy`_ and `SciPy`_ (as well as a build-time dependency
+of `Cython`_, as mentioned above). The minimal version is installed by running: ::
 
     pip install gerbls
+
+.. _SciPy: https://scipy.org/
 
 Installing from source
 ----------------------
@@ -44,7 +48,7 @@ Alternatively, the GERBLS source repository can be cloned from GitHub and instal
     pip install ".[extras]"
 
 The ``[extras]`` option can be omitted for a minimal install, as described above. A source install
-also includes unit tests that can be run via `pytest`_ (which is installed with ``[extras]``): ::
+also includes unit tests that can be run via `pytest`_ (which is included with ``[extras]``): ::
 
     pytest
 
