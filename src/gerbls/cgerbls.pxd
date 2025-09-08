@@ -39,6 +39,7 @@ cdef extern from "cpp/model.hpp":
         vector[double] freq
         vector[size_t] N_bins
         
+        size_t calculate_N_freq()
         size_t N_freq()
         void run(bool_t, bool_t)
     

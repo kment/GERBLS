@@ -2,6 +2,7 @@ from __future__ import annotations
 import gerbls
 import numpy as np
 import numpy.typing as npt
+from typing import Union
 
 
 def run_bls(time: npt.ArrayLike,
@@ -9,7 +10,7 @@ def run_bls(time: npt.ArrayLike,
             err: npt.ArrayLike,
             min_period: float,
             max_period: float,
-            durations: list,
+            durations: Union[list, float],
             t_samp: float = 0.):
     """
     A basic convenience function to generate a BLS spectrum.
@@ -28,7 +29,7 @@ def run_bls(time: npt.ArrayLike,
         Minimum BLS period to search.
     max_period : float
         Maximum BLS period to search.
-    durations : list
+    durations : list or float
         List of transit durations to test at each period.
     t_samp : float, optional
         Time sampling to bin the data before running the BLS.
@@ -50,6 +51,8 @@ def run_bls(time: npt.ArrayLike,
         ``dmag``  best-fit transit depth at each period
         ========= ===================================================
     """
+    # Input checks
+    assert len(time) == len(mag) == len(err), "time, mag, and err must have the same length."
 
     # Make sure the data is time-sorted and formatted as Numpy arrays
     if np.all(np.diff(time) >= 0):
@@ -61,6 +64,9 @@ def run_bls(time: npt.ArrayLike,
         time = np.array(time)[order]
         mag = np.array(mag)[order]
         err = np.array(err)[order]
+    
+    if not hasattr(durations, "__len__"):
+        durations = [durations]
 
     # Create a GERBLS data container
     phot = gerbls.pyDataContainer()

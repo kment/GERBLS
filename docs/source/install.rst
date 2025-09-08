@@ -37,6 +37,9 @@ of `Cython`_, as mentioned above). The minimal version is installed by running: 
 
     pip install gerbls
 
+.. versionchanged:: 0.8
+    SciPy is now a requirement for a minimal install.
+
 .. _SciPy: https://scipy.org/
 
 Installing from source

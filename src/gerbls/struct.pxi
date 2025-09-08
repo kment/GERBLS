@@ -49,7 +49,7 @@ cdef class pyDataContainer:
     # Assign data without copying
     cpdef void assign(self, double[::1] rjd, double[::1] mag, double[::1] err):
         """
-        Assign data to the container without making a copy.
+        Assign data to the container without making a copy. Data must be time-sorted.
 
         .. caution:: Crashes may occur if any of the referenced arrays get deallocated.
 
@@ -62,9 +62,13 @@ cdef class pyDataContainer:
         err : ArrayLike
             C-contiguous array of flux uncertainties.
         """
+        # Make sure the data is time-sorted
         cdef Py_ssize_t i
+        for i in range(rjd.shape[0] - 1):
+            assert rjd[i] <= rjd[i+1], "Input data has not been sorted in time."
+
         if self.cPtr is NULL:
-            self.allocate()
+            self.cPtr = new DataContainer()
         self.cPtr.set(&rjd[0], &mag[0], &err[0], rjd.shape[0])
     
     def clean(self, double P_rot = 0, int N_flares = 3):
@@ -189,7 +193,7 @@ cdef class pyDataContainer:
     # Store data by making a copy
     def store(self, double[:] rjd, double[:] mag, double[:] err, bool_t convert_to_flux = False):
         """
-        Store data in the container by making a copy.
+        Store data in the container by making a copy. Data must be time-sorted.
 
         Parameters
         ----------
@@ -203,6 +207,9 @@ cdef class pyDataContainer:
             If True, fluxes are given as relative deviations in the form of :math:`-2.5 \log f`
             and will be converted to relative fluxes :math:`f` before storing. By default False.
         """
+        # Input checks
+        assert np.all(np.diff(rjd) >= 0), "Input data has not been sorted in time."
+
         cdef Py_ssize_t i
         cdef double[::1] rjd_ = np.ascontiguousarray(rjd)
         cdef double[::1] mag_ = np.ascontiguousarray(mag)

@@ -71,6 +71,17 @@ cdef class pyBLSModel:
     
     cdef void assert_setup(self):
         assert self.cPtr is not NULL, "Model needs to be set up first."
+    
+    def calculate_N_freq(self):
+        """
+        Calculate the number of tested frequencies without running the model.
+
+        Returns
+        -------
+        int
+        """
+        self.assert_setup()
+        return self.cPtr.calculate_N_freq()
 
     @property
     def duration_mode(self):

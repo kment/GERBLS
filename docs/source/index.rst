@@ -19,6 +19,7 @@ GERBLS can outperform popular brute-force BLS implementations such as
    install
    getting_started
    basic_usage
+   full_usage
    examples/fastbls
    api/index
 

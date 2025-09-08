@@ -26,7 +26,8 @@ def clean_savgol(phot: gerbls.pyDataContainer,
     phot : gerbls.pyDataContainer
         Input data to be cleaned.
     N_flares : int, optional
-        Number of iterations to detect flares, by default 3
+        Number of iterations to detect flares, by default 3. Flares are defined as 4 or more
+        consecutive positive 2-sigma deviants.
     sigma_clip: float, optional
         Whether to remove outliers more than X sigma from the initial baseline, by default 5.
         To turn off, enter 0.

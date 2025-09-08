@@ -9,6 +9,8 @@ described below.
 
 .. _AstroPy user guide: https://docs.astropy.org/en/stable/timeseries/bls.html
 
+.. _things-to-know-label:
+
 Things to know about GERBLS
 ---------------------------
 
@@ -27,15 +29,17 @@ be lower in the presence of correlated noise that has not been successfully detr
 
 .. |dchi2| replace:: :math:`\Delta\chi^2`
 
+.. _period-grid-label:
+
 The period grid
 ^^^^^^^^^^^^^^^
 Unlike a brute-force implementation of BLS, the fast-folding [3]_ [4]_ approach of GERBLS does not
 provide an easy way to directly manipulate the period array of the BLS periodogram. This is due to
 the period sampling not being *exactly* evenly spaced in orbital frequency or period (although
-locally, the period sampling is often close to even in orbital frequency). However, the minimum and
-maximum search periods can still be directly defined, and **the number of periods searched can be
-affected via the time sampling rate of the input data**. GERBLS provides an easy way to specify the
-desired time sampling when setting up the BLS (longer-cadence data = fewer periods searched).
+locally, the period grid is approximately evenly sampled in orbital frequency). However, the minimum
+and maximum search periods can still be directly defined, and **the number of periods searched can
+be affected via the time sampling rate of the input data**. GERBLS provides an easy way to specify
+the desired time sampling when setting up the BLS (longer-cadence data = fewer periods searched).
 Furthermore, longer orbital periods are relatively more computationally expensive to search; GERBLS
 can automatically downsample the data at longer periods to further speed up the BLS while not
 sacrificing higher period resolution at shorter orbital periods where errors in the calculated
