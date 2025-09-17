@@ -9,7 +9,7 @@ from libcpp.vector cimport vector
 
 cdef extern from "cpp/ffafunc.hpp":
     size_t periodogram_length(size_t, double, double, double, bool, double, double)
-    unique_ptr[DataContainer] resample_uniform(DataContainer, double)
+    unique_ptr[DataContainer] resample_uniform(DataContainer, double, double)
 
 cdef extern from "cpp/model.hpp":
     cdef enum class DurationMode:

@@ -129,7 +129,10 @@ def raise_import_error(str source_function, str missing_dep):
         f"{source_function} requires {missing_dep}, which is an optional dependency. Please check "
         f"that {missing_dep.split('.')[0]} has been properly installed.")
 
-def resample(pyDataContainer data, double t_samp):
+def resample(pyDataContainer data not None,
+             double t_samp,
+             bool_t fractional_weights = True,
+             double t_samp_old = 0.):
     """
     Returns a copy of the input data, resampled to the specified time cadence.
 
@@ -139,11 +142,25 @@ def resample(pyDataContainer data, double t_samp):
         Input data.
     t_samp : float
         Desired time cadence.
+    fractional_weights : bool
+        Whether to use fractional weights to split up input data points into resampled data bins (if
+        False, each data point will be placed in its nearest resampled bin). By default True.
+    t_samp_old : float
+        Allows the input data time cadence to be specified explicitly. If zero (default), the median
+        time difference between input data points will be used. Only has an effect if
+        `fractional_weights` is True.
     
     Returns
     -------
-    out : gerbls.pyDataContainer
+    gerbls.pyDataContainer
         Resampled data.
     """
-    out = pyDataContainer.from_ptr(resample_uniform(data.cPtr[0], t_samp).release(), True)
-    return out
+    cdef double t_err = 0.
+    if fractional_weights:
+        if t_samp_old == 0:
+            t_err = np.median(np.diff(data.rjd)) * 0.5
+        else:
+            t_err = t_samp_old * 0.5
+    out = pyDataContainer.from_ptr(resample_uniform(data.cPtr[0], t_samp, t_err).release(), True)
+    out_masked = out.mask(out.mag != 0)     # Remove invalid bins (bins that cover no input data)
+    return out_masked

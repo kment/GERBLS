@@ -232,7 +232,7 @@ std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
     /* Downsampling loop */
     for (size_t ids = 0; ids < num_downsamplings; ++ids) {
 
-        const double f = pow(ds_geo, ids);  // current downsampling factor
+        const double f = pow(ds_geo, ids);   // current downsampling factor
         const double tau = f * model.t_samp; // current sampling time
         const double period_max_samples = period_max / tau;
         const size_t n = riptide::downsampled_size(size, f); // current number of real input samples
@@ -384,24 +384,46 @@ size_t periodogram_length(size_t size,
     return length;
 }
 
-// Resample the light curve with a uniform sampling interval
-// Assumes the data are already time-sorted
-std::unique_ptr<DataContainer> resample_uniform(const DataContainer &data, double tsamp)
+// Resample the light curve with a uniform sampling interval (tsamp).
+// terr is the one-sided uncertainty on timestamps. If not 0, fractional weighting into bins will be
+// used. Empty bins will be filled with zeros with data.valid_mask[] set to false. Assumes the data
+// are already time-sorted.
+std::unique_ptr<DataContainer>
+    resample_uniform(const DataContainer &data, double tsamp, double terr)
 {
     std::unique_ptr<DataContainer> out(new DataContainer);
     size_t N_sampled = resample_uniform_size(data, tsamp);
     out->allocate(N_sampled);
     out->valid_mask.reset(new bool[N_sampled]);
     size_t i = 0;
+    double frac = 0.;
 
+    // Loop over new (resampled) bins
     for (size_t j = 0; j < N_sampled; j++) {
         out->rjd[j] = data.rjd[0] + j * tsamp;
-        out->mag[j] = 0;
-        out->err[j] = 0;
-        while ((i < data.size) && (data.rjd[i] < data.rjd[0] + (j + 0.5) * tsamp)) {
+        // Add the remainder if the previous data point was split up between two bins
+        if (frac > 0) {
+            out->mag[j] = (1 - frac) * data.mag[i] / data.err[i] / data.err[i];
+            out->err[j] = (1 - frac) / data.err[i] / data.err[i];
+            i++;
+        }
+        else {
+            out->mag[j] = 0;
+            out->err[j] = 0;
+        }
+        frac = 0;
+        // Add all data points that fully fit into the new bin
+        while ((i < data.size) && (data.rjd[i] + terr < data.rjd[0] + (j + 0.5) * tsamp)) {
             out->mag[j] += data.mag[i] / data.err[i] / data.err[i];
             out->err[j] += 1 / data.err[i] / data.err[i];
             i++;
+        }
+        // Add a fraction of the first data point that does not fully fit
+        // Note that this will never evaluate to true if terr == 0
+        if ((i < data.size) && (data.rjd[i] - terr < data.rjd[0] + (j + 0.5) * tsamp)) {
+            frac = 0.5 * ((data.rjd[0] + (j + 0.5) * tsamp) - (data.rjd[i] - terr)) / terr;
+            out->mag[j] += frac * data.mag[i] / data.err[i] / data.err[i];
+            out->err[j] += frac / data.err[i] / data.err[i];
         }
     }
 
