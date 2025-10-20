@@ -1,6 +1,6 @@
 # cython: language_level = 3
-# BLS model and analyzer to be included in gerbls.pyx
-# See gerbls.pyx for module imports
+# BLS models to be included in gerbls.pyx
+# See core.pyx for module imports
 
 # Allowed duration modes for BLS models
 cdef dict allowed_duration_modes = {'': DurationMode.None,
@@ -192,6 +192,13 @@ cdef class pyBruteForceBLS(pyBLSModel):
         if self.alloc:
             del self.dPtr
     
+    cdef pyBruteForceBLS duplicate(self):
+        cdef pyBruteForceBLS new_model = pyBruteForceBLS.__new__(pyBruteForceBLS)
+        new_model.alloc = True
+        new_model.dPtr = <BLSModel_bf*>self.cPtr.duplicate().release()
+        new_model.cPtr = new_model.dPtr
+        return new_model
+
     def setup(self,
               pyDataContainer data not None,
               double min_period,
@@ -355,6 +362,13 @@ cdef class pyFastBLS(pyBLSModel):
         if self.alloc:
             del self.dPtr
     
+    cpdef pyFastBLS duplicate(self):
+        cdef pyFastBLS new_model = pyFastBLS.__new__(pyFastBLS)
+        new_model.alloc = True
+        new_model.dPtr = <BLSModel_FFA*>self.cPtr.duplicate().release()
+        new_model.cPtr = new_model.dPtr
+        return new_model
+    
     @property
     def rdata(self):
         self.assert_setup()
@@ -476,305 +490,3 @@ cdef class pyFastBLS(pyBLSModel):
     def time_spent(self):
         self.assert_setup()
         return np.asarray(<double [:self.dPtr.time_spent.size()]>self.dPtr.time_spent.data())
-
-cdef class pyBLSAnalyzer:
-    """
-    pyBLSAnalyzer(model)
-
-    BLS results analyzer.
-
-    .. caution:: Only a reference to ``model`` is stored. Crashes or unexpected results may occur if
-        the referenced object gets deallocated.
-    
-    Parameters
-    ----------
-    model : gerbls.pyBLSModel
-        BLS model generator that was used to generate the BLS spectrum.
-    
-    
-    .. property:: dchi2
-        :type: numpy.ndarray
-
-        Get the array of best-fit :math:`\Delta\chi^2` values for each tested period.
-    
-    .. property:: dmag
-        :type: numpy.ndarray
-
-        Get the array of best-fit transit depths for each tested period.
-
-    .. property:: dur
-        :type: numpy.ndarray
-
-        Get the array of best-fit transit durations for each tested period.
-    
-    .. property:: f
-        :type: numpy.ndarray
-
-        Get the array of tested orbital frequencies (`= 1/period`).
-    
-    .. property:: mag0
-        :type: numpy.ndarray
-
-        Get the array of best-fit out-of-transit flux baselines for each tested period.
-
-    .. property:: P
-        :type: numpy.ndarray
-
-        Get the tested orbital periods.
-    
-    .. property:: t0
-        :type: numpy.ndarray
-
-        Get the array of best-fit transit midpoint times for each tested period.
-    """
-    cdef size_t [:] _bins
-    cdef double [:] _dchi2
-    cdef double [:] _dmag
-    cdef double [:] _dur
-    cdef double [:] _freq
-    cdef double [:] _mag0
-    cdef bool_t [:] _mask
-    cdef double [:] _t0
-    cdef size_t N_freq
-    cdef double t_samp
-    
-    def __cinit__(self, pyBLSModel model not None):
-        model.assert_setup()
-        self._bins = model.view_bins()
-        self._dchi2 = model.view_dchi2()
-        self._dmag = model.view_dmag()
-        self._dur = model.view_dur()
-        self._freq = model.view_freq()
-        self._mag0 = model.view_mag0()
-        self._t0 = model.view_t0()
-        self.N_freq = model.N_freq
-        self.t_samp = (model.t_samp if hasattr(model, "t_samp") else 0)
-        self.initialize_mask()
-    
-    @property
-    def dchi2(self):
-        return np.asarray(self._dchi2)
-    
-    @property
-    def dmag(self):
-        return np.asarray(self._dmag)
-    
-    @property
-    def dur(self):
-        return np.asarray(self._dur)
-    
-    @property
-    def f(self):
-        return np.asarray(self._freq)
-    
-    cdef void initialize_mask(self):
-        self._mask = np.ones(self.N_freq, dtype = np.bool_)
-        # Ignore anti-transits
-        self._mask *= (self.dmag > 0)
-        
-    @property
-    def mag0(self):
-        return np.asarray(self._mag0)
-    
-    @property
-    def mask(self):
-        return np.asarray(self._mask)
-
-    @property
-    def N_bins(self):
-        return np.asarray(self._bins)
-    
-    @property
-    def P(self):
-        return self.f**-1
-    
-    @property
-    def t0(self):
-        return np.asarray(self._t0)
-    
-    def generate_models(self, N_models, double unmaskf = 0.005):
-        """
-        Identify the top BLS models (periods) in terms of highest :math:`\Delta\chi^2` values.
-
-        Parameters
-        ----------
-        N_models : int
-            Number of models to generate.
-        unmaskf : float, optional
-            The frequencies of any generated models must differ by at least this amount, by default
-            0.005.
-        
-        Returns
-        -------
-        list
-            List of :class:`gerbls.pyBLSResult` corresponding to the identified models.
-        """
-        # Perform input checks
-        assert unmaskf > 0, "unmaskf must be positive."
-
-        self.initialize_mask()
-        return [self.generate_next_model(unmaskf) for _ in range(N_models)]
-    
-    def generate_next_model(self, double unmaskf = 0.005):
-        """:meta private:"""
-        
-        if not self.mask.any():
-            return None
-        
-        cdef size_t mask_index = np.argmax(self.dchi2[self.mask])
-        cdef size_t index = np.where(self.mask)[0][mask_index]
-        
-        # Returned frequencies must be some range apart
-        self.unmask_freq(self._freq[index], unmaskf)
-        
-        return pyBLSResult(self, index)
-    
-    # Mask out BLS frequencies less than df away from f_
-    cpdef void unmask_freq(self, double f_, double df):
-        """:meta private:"""
-        self._mask *= (np.abs(self.f - f_) >= df)
-
-cdef class pyBLSResult:
-    """
-    pyBLSResult(blsa, index)
-
-    Fitted BLS model at a specific orbital period.
-
-    Parameters
-    ----------
-    blsa : gerbls.pyBLSAnalyzer
-        BLS analyzer object.
-    index : int
-        Index of the orbital period stored in the BLS analyzer.
-    
-    
-    .. property:: dchi2
-        :type: float
-        
-        Get the :math:`\Delta\chi^2` of the fitted model.
-
-    .. property:: dmag
-        :type: float
-        
-        Get the transit depth.
-
-    .. property:: dur
-        :type: float
-        
-        Get the transit duration.
-
-    .. property:: mag0
-        :type: float
-        
-        Get the out-of-transit flux baseline.
-
-    .. property:: P
-        :type: float
-        
-        Get the orbital period.
-    
-    .. property:: r
-        :type: float
-        
-        Calculate the planet-to-star radius ratio.
-
-    .. property:: snr_from_dchi2
-        :type: float
-        
-        Get an initial estimate of the SNR from :math:`\\textrm{SNR} \\approx \sqrt{\Delta\chi^2}`.
-
-    .. property:: t0
-        :type: float
-        
-        Get the transit midpoint time.
-    """
-    cdef readonly double P
-    cdef readonly double dchi2
-    cdef readonly double mag0
-    cdef readonly double dmag
-    cdef readonly double t0
-    cdef readonly double dur
-
-    def __cinit__(self, pyBLSAnalyzer blsa not None, size_t index):
-
-        assert blsa.N_freq > 0, "BLS model has no generated frequencies."
-        assert 0 <= index < blsa.N_freq, "index out of bounds for the BLS model."
-
-        self.P = blsa.P[index]
-        self.dchi2 = blsa.dchi2[index]
-        self.mag0 = blsa.mag0[index]
-        self.dmag = blsa.dmag[index]
-        self.t0 = (blsa.t0[index] + blsa.dur[index] / 2) % blsa.P[index]
-        self.dur = blsa.dur[index]
-    
-    def __str__(self):
-        return (
-            f"pyBLSResult(P={self.P}, dchi2={self.dchi2}, mag0={self.mag0}, dmag={self.dmag}, "
-            f"t0={self.t0}, dur={self.dur}, snr={self.snr_from_dchi2})"
-        )
-    
-    @property
-    def r(self):
-        return (self.dmag / self.mag0)**0.5
-    
-    @property
-    def snr_from_dchi2(self):
-        return self.dchi2**0.5
-    
-    def get_dmag_err(self, pyDataContainer phot not None):
-        """
-        Calculate the uncertainty in :attr:`dmag` (transit depth).
-
-        Parameters
-        ----------
-        phot : gerbls.pyDataContainer
-            Fitted data.
-        
-        Returns
-        -------
-        float
-        """
-        # Perform input checks
-        assert phot.size > 0, "Data container cannot be empty."
-
-        cdef bool_t[:] mask = self.get_transit_mask(phot.rjd)
-        cdef double err_in = np.sum(phot.err[mask]**-2)**-0.5
-        cdef double err_out = np.sum(phot.err[invert_mask(mask)]**-2)**-0.5
-        return (err_in**2 + err_out**2)**0.5
-
-    def get_SNR(self, pyDataContainer phot not None):
-        """
-        Calculate the transit SNR from uncertainty in :attr:`dmag`.
-
-        Parameters
-        ----------
-        phot : gerbls.pyDataContainer
-            Fitted data.
-        
-        Returns
-        -------
-        float
-        """
-        # Perform input checks
-        assert phot.size > 0, "Data container cannot be empty."
-
-        return self.dmag / self.get_dmag_err(phot)
-
-    def get_transit_mask(self, double[:] t):
-        """
-        Determine which of the given input times are in-transit.
-
-        Parameters
-        ----------
-        t : ArrayLike
-            Array of observation times.
-        
-        Returns
-        -------
-        numpy.ndarray
-            Boolean array with True values corresponding to in-transit data points.
-        """
-        # Perform input checks
-        assert len(t) > 0, "No observation times given."
-
-        return (abs((np.array(t) - self.t0 + self.P / 2) % self.P - self.P / 2) < self.dur / 2)

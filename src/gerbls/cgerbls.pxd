@@ -24,6 +24,7 @@ cdef extern from "cpp/model.hpp":
         MaximumDChi2
 
     cdef cppclass BLSModel:
+        DataContainer* data
         const Target* target
         double f_min
         double f_max
@@ -40,10 +41,12 @@ cdef extern from "cpp/model.hpp":
         vector[size_t] N_bins
         
         size_t calculate_N_freq()
+        unique_ptr[BLSModel] duplicate() const
         size_t N_freq()
         void run(bool_t, bool_t)
     
     cdef cppclass BLSModel_bf(BLSModel):
+        double t_bins
         BLSModel_bf(DataContainer,
                     double,
                     double,

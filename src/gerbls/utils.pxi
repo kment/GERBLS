@@ -100,7 +100,7 @@ def fit_chi2_dist(double[:] sample):
         The optimization result (refer to SciPy docs for more specific documentation).
     """
     cdef double[:] x0 = np.array([log(np.mean(sample)), 0.01, 0.01])
-    cdef res = minimize(chi2_loss_and_grad_exp, x0, method='BFGS', jac=True, args=(sample,))
+    res = minimize(chi2_loss_and_grad_exp, x0, method='BFGS', jac=True, args=(sample,))
     
     return res
 
@@ -142,10 +142,10 @@ def resample(pyDataContainer data not None,
         Input data.
     t_samp : float
         Desired time cadence.
-    fractional_weights : bool
+    fractional_weights : bool, optional
         Whether to use fractional weights to split up input data points into resampled data bins (if
         False, each data point will be placed in its nearest resampled bin). By default True.
-    t_samp_old : float
+    t_samp_old : float, optional
         Allows the input data time cadence to be specified explicitly. If zero (default), the median
         time difference between input data points will be used. Only has an effect if
         `fractional_weights` is True.

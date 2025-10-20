@@ -16,6 +16,7 @@ from scipy.stats import chi2
 cdef const double LN2 = 0.69314718
 
 # These are just text inclusions
+include "blsanalyze.pxi"
 include "blsmodel.pxi"
 include "noisebls.pxi"
 include "struct.pxi"
