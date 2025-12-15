@@ -32,6 +32,7 @@ cdef extern from "cpp/model.hpp":
         double max_duration_factor
         DurationMode duration_mode
         vector[double] chi2_dmag
+        #vector[double] chi2_dmag_err
         vector[double] chi2_dt
         vector[double] chi2_mag0
         vector[double] chi2_t0

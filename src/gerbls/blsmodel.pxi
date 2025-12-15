@@ -165,6 +165,9 @@ cdef class pyBLSModel:
     cdef double [::1] view_dmag(self):
         return <double [:self.N_freq]>self.cPtr.chi2_dmag.data()
     
+    #cdef double [::1] view_dmag_err(self):
+    #    return <double [:self.N_freq]>self.cPtr.chi2_dmag_err.data()
+    
     cdef double [::1] view_dur(self):
         return <double [:self.N_freq]>self.cPtr.chi2_dt.data()
     

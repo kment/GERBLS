@@ -19,6 +19,7 @@ template <typename T> struct BLSResult {
     size_t dur;
     T mag0;
     T dmag;
+    //T dmag_err;
     T dchi2;
     size_t N_bins;
     double time_spent;

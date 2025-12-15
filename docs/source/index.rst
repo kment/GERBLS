@@ -2,8 +2,8 @@ GERBLS documentation
 ====================
 
 .. important::
-   This documentation is currently undergoing improvements. Some package features be poorly
-   documented, which will be improved in the near future.
+   This documentation is currently undergoing improvements. Some package features may not be fully
+   documented yet; this will be improved in the near future.
 
 **GERBLS** (Greatly Expedited Robust Box Least Squares) is a lightweight
 fast-folding implementation of the BLS (Box Least Squares) algorithm. It is designed to facilitate

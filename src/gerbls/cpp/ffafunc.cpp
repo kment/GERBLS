@@ -58,6 +58,7 @@ void array_dchi2_max(const T *__restrict__ prod,
         result.dur = width;
         result.mag0 = -prod[i_max] / wtotal / (1 - wts[i_max] / wtotal);
         result.dmag = -prod[i_max] / wts[i_max] / (1 - wts[i_max] / wtotal);
+        //result.dmag_err = sqrt(1 / wts[i_max] + 1 / (wtotal - wts[i_max]));
         result.dchi2 = dchi2_max;
     }
 }
@@ -234,7 +235,9 @@ std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
 
         const double f = pow(ds_geo, ids);   // current downsampling factor
         const double tau = f * model.t_samp; // current sampling time
-        const double period_max_samples = period_max / tau;
+        const double period_max_ids =
+            std::min(pow(ds_geo, model.ds_invpower * (ids + 1)), period_max);
+        const double period_max_samples = (model.downsample ? period_max_ids : period_max) / tau;
         const size_t n = riptide::downsampled_size(size, f); // current number of real input samples
         const size_t n_padded = n + period_max_samples;      // number of samples after zero-padding
 
@@ -263,7 +266,8 @@ std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
         if (model.downsample) {
             bstart = bins_min * pow(model.ds_threshold, (model.ds_invpower - 1) * ids);
             bstop =
-                std::min(bstart * pow(model.ds_threshold, model.ds_invpower), period_max_samples);
+                std::min(bins_min * pow(model.ds_threshold, model.ds_invpower * (ids + 1) - ids),
+                         period_max_samples);
         }
         else {
             bstart = bins_min;
@@ -359,13 +363,15 @@ size_t periodogram_length(size_t size,
 
         const double f = pow(ds_geo, ids); // current downsampling factor
         const double tau = f * tsamp;      // current sampling time
-        const double period_max_samples = period_max / tau;
+        const double period_max_ids = std::min(pow(ds_geo, ds_invpower * (ids + 1)), period_max);
+        const double period_max_samples = (downsample ? period_max_ids : period_max) / tau;
         const size_t n = riptide::downsampled_size(size, f); // current number of real input samples
         const size_t n_padded = n + period_max_samples;      // number of samples after zero-padding
 
         if (downsample) {
             bstart = bins_min * pow(ds_threshold, (ds_invpower - 1) * ids);
-            bstop = std::min(bstart * pow(ds_threshold, ds_invpower), period_max_samples);
+            bstop = std::min(bins_min * pow(ds_threshold, ds_invpower * (ids + 1) - ids),
+                             period_max_samples);
         }
         else {
             bstart = bins_min;

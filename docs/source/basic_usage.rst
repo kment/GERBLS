@@ -1,7 +1,7 @@
 Basic usage
 ===========
 
-.. attention:: **Basic usage has limited functionality and is designed for quick-start testing.** To leverage the full functionality of GERBLS, see :doc:`full_usage`.
+.. attention:: **The basic usage setup has limited functionality and omits many features in favor of a quick-start setup.** To leverage the full functionality of GERBLS, see :doc:`full_usage`.
 
 Overview
 --------

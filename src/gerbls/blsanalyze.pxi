@@ -65,6 +65,11 @@ cdef class pyBLSAnalyzer:
 
         Get the array of tested orbital periods.
     
+    .. property:: snr
+        :type: numpy.ndarray
+
+        Get an estimated SNR at each period from :math:`\\textrm{SNR} \\approx \sqrt{\Delta\chi^2}`.
+    
     .. property:: t0
         :type: numpy.ndarray
 
@@ -95,6 +100,11 @@ cdef class pyBLSAnalyzer:
         self.model.assert_setup()
         return np.asarray(self.model.view_dmag())
     
+    #@property
+    #def dmag_err(self):
+    #    self.model.assert_setup()
+    #    return np.asarray(self.model.view_dmag_err())
+    #
     @property
     def dur(self):
         self.model.assert_setup()
@@ -104,12 +114,6 @@ cdef class pyBLSAnalyzer:
     def f(self):
         self.model.assert_setup()
         return np.asarray(self.model.view_freq())
-    
-    cdef void initialize_mask(self):
-        self.model.assert_setup()
-        self._mask = np.ones(self.model.N_freq, dtype = np.bool_)
-        # Ignore anti-transits
-        self._mask *= (self.dmag > 0)
         
     @property
     def mag0(self):
@@ -130,11 +134,31 @@ cdef class pyBLSAnalyzer:
         return self.f**-1
     
     @property
+    def snr(self):
+        return self.dchi2**0.5
+    
+    @property
     def t0(self):
         self.model.assert_setup()
         return np.asarray(self.model.view_t0())
     
-    def generate_models(self, N_models, double unmaskf = 0.005):
+    def fit_bls_trend(self, size_t window_length = 1001):
+        """
+        Fit a trendline to the SNR values using a median filter.
+
+        Parameters
+        ----------
+        window_length : int
+            Window length for the median filter.
+        
+        Returns
+        -------
+        np.ndarray
+            Fitted SNR trend at each tested period.
+        """
+        return median_filter(self.snr, window_length, mode='reflect')
+    
+    def generate_models(self, N_models, double unmaskf = 0.005, bool_t use_SDE = False, **kwargs):
         """
         Identify the top BLS models (periods) in terms of highest :math:`\Delta\chi^2` values.
 
@@ -145,6 +169,12 @@ cdef class pyBLSAnalyzer:
         unmaskf : float, optional
             The frequencies of any generated models must differ by at least this amount, by default
             0.005.
+        use_SDE : bool, optional
+            Whether to use the Signal Detection Efficiency (SDE) to identify peaks instead of the
+            :math:`\Delta\chi^2` values, by default False.
+        **kwargs
+            Any keyword arguments are passed to :meth:`get_SDE`. Has no effect if `use_SDE` is
+            False.
         
         Returns
         -------
@@ -155,16 +185,18 @@ cdef class pyBLSAnalyzer:
         assert unmaskf > 0, "unmaskf must be positive."
 
         self.initialize_mask()
-        return [self.generate_next_model(unmaskf) for _ in range(N_models)]
+        return [self.generate_next_model(unmaskf, use_SDE, **kwargs) for _ in range(N_models)]
     
-    def generate_next_model(self, double unmaskf = 0.005):
+    def generate_next_model(self, double unmaskf = 0.005, bool_t use_SDE = False, **kwargs):
         """:meta private:"""
         cdef size_t index, mask_index
         
         if not self.mask.any():
             return None
         
-        if self.noise is None:
+        if use_SDE:
+            mask_index = np.argmax(self.get_SDE(**kwargs)[self.mask])
+        elif self.noise is None:
             mask_index = np.argmax(self.dchi2[self.mask])
         else:
             if self.noise_interp:
@@ -179,6 +211,30 @@ cdef class pyBLSAnalyzer:
         self.unmask_freq(self.f[index], unmaskf)
         
         return pyBLSResult(self, index)
+    
+    def get_SDE(self, **kwargs):
+        """
+        Calculate the Signal Detection Efficiency (SDE) at each tested period.
+
+        Parameters
+        ----------
+        **kwargs
+            Passed to BLS trend calculation.
+        
+        Returns
+        -------
+        np.ndarray
+            Array of SDE values at each tested period.
+        """
+        bls_trend = self.fit_bls_trend(**kwargs)
+        bls_scatter = np.std(self.snr - bls_trend)
+        return (self.snr - bls_trend) / bls_scatter
+    
+    cdef void initialize_mask(self):
+        self.model.assert_setup()
+        self._mask = np.ones(self.model.N_freq, dtype = np.bool_)
+        # Ignore anti-transits
+        self._mask *= (self.dmag > 0)
     
     # Mask out BLS frequencies less than df away from f_
     cpdef void unmask_freq(self, double f_, double df):
@@ -229,10 +285,15 @@ cdef class pyBLSResult:
         
         Calculate the planet-to-star radius ratio.
 
+    .. property:: snr
+        :type: float
+        
+        Get an estimated SNR from :math:`\\textrm{SNR} \\approx \sqrt{\Delta\chi^2}`.
+    
     .. property:: snr_from_dchi2
         :type: float
         
-        Get an initial estimate of the SNR from :math:`\\textrm{SNR} \\approx \sqrt{\Delta\chi^2}`.
+        Alias of :attr:`snr`.
 
     .. property:: t0
         :type: float
@@ -269,8 +330,12 @@ cdef class pyBLSResult:
         return (self.dmag / self.mag0)**0.5
     
     @property
-    def snr_from_dchi2(self):
+    def snr(self):
         return self.dchi2**0.5
+    
+    @property
+    def snr_from_dchi2(self):
+        return self.snr
     
     def get_dmag_err(self, pyDataContainer phot not None):
         """

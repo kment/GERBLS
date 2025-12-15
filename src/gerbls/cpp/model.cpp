@@ -260,6 +260,7 @@ void BLSModel_bf::initialize(double t_bins, size_t N_bins_min)
     chi2r.resize(N_freq());
     chi2_mag0.resize(N_freq());
     chi2_dmag.resize(N_freq());
+    //chi2_dmag_err.assign(N_freq(), 0);
     chi2_t0.resize(N_freq());
     chi2_dt.resize(N_freq());
     N_bins.resize(N_freq());
@@ -421,6 +422,7 @@ void BLSModel_FFA::process_results(std::vector<BLSResult<T>> &results, bool full
     if (full_results) {
         chi2_mag0.assign(N_freq, 0);
         chi2_dmag.assign(N_freq, 0);
+        //chi2_dmag_err.assign(N_freq, 0);
         chi2_t0.assign(N_freq, 0);
         chi2_dt.assign(N_freq, 0);
         N_bins.assign(N_freq, 0);
@@ -433,6 +435,7 @@ void BLSModel_FFA::process_results(std::vector<BLSResult<T>> &results, bool full
         if (full_results) {
             chi2_mag0[i] = pres->mag0;
             chi2_dmag[i] = pres->dmag;
+            //chi2_dmag_err[i] = pres->dmag_err;
             chi2_t0[i] = fmod(rdata->rjd[0] + t_samp * (pres->t0 - 0.5), pres->P);
             chi2_dt[i] = t_samp * pres->dur;
             N_bins[i] = pres->N_bins;

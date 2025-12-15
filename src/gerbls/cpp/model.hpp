@@ -66,6 +66,7 @@ struct BLSModel {
 
     // Required results for each tested frequency
     std::vector<double> dchi2, chi2_mag0, chi2_dmag, chi2_t0, chi2_dt;
+    //std::vector<double> chi2_dmag_err;
 
     // Number of phase-folded data bins at each tested frequency
     std::vector<size_t> N_bins;

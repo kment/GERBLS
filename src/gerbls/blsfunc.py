@@ -14,8 +14,9 @@ def run_bls(time: npt.ArrayLike,
             t_samp: float = 0.):
     """
     A basic convenience function to generate a BLS spectrum.
-    The data must be evenly sampled in time to run the BLS,
-    use ``t_samp`` to specify the cadence for any resampling.
+    The input data will be resampled to a uniform time cadence to run the BLS,
+    use ``t_samp`` to explicitly provide the cadence for resampling.
+    Automatic downsampling will be used to maintain an optimal period spacing.
 
     Parameters
     ----------
@@ -49,6 +50,7 @@ def run_bls(time: npt.ArrayLike,
         ``dur``   best-fit duration at each period
         ``mag0``  best-fit flux baseline at each period
         ``dmag``  best-fit transit depth at each period
+        ``snr``   estimated SNR at each period
         ========= ===================================================
     """
     # Input checks
@@ -79,7 +81,8 @@ def run_bls(time: npt.ArrayLike,
               max_period,
               t_samp=t_samp,
               duration_mode='constant',
-              durations=durations)
+              durations=durations,
+              downsample=True)
     bls.run(verbose=True)
 
     # Return the BLS spectrum
@@ -89,4 +92,5 @@ def run_bls(time: npt.ArrayLike,
             't0': np.copy(blsa.t0),
             'dur': np.copy(blsa.dur),
             'mag0': np.copy(blsa.mag0),
-            'dmag': np.copy(blsa.dmag)}
+            'dmag': np.copy(blsa.dmag),
+            'snr': np.copy(blsa.snr)}

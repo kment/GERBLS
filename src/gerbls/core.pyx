@@ -8,6 +8,7 @@ from libcpp cimport bool as bool_t
 from libcpp.vector cimport vector
 import numpy as np
 cimport numpy as np
+from scipy.ndimage import median_filter
 from scipy.optimize import minimize
 from scipy.special import digamma
 from scipy.stats import chi2
