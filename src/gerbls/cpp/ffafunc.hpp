@@ -26,14 +26,14 @@ template <typename T> struct BLSResult {
 };
 
 template <typename T>
-void array_diff(const T *__restrict__ x,
-                const T *__restrict__ y,
+void array_diff(const T *__restrict x,
+                const T *__restrict y,
                 const size_t size,
-                T *__restrict__ out);
+                T *__restrict out);
 
 template <typename T>
-void array_dchi2_max(const T *__restrict__ prod,
-                     const T *__restrict__ wts,
+void array_dchi2_max(const T *__restrict prod,
+                     const T *__restrict wts,
                      const size_t size,
                      const T wtotal,
                      BLSResult<T> &result,
@@ -52,22 +52,22 @@ void chisq_2d(riptide::ConstBlock<T> wprod,
               BLSResult<T> *results);
 
 template <typename T>
-void chisq_row(const T *__restrict__ wprod,
-               const T *__restrict__ wts,
+void chisq_row(const T *__restrict wprod,
+               const T *__restrict wts,
                const size_t size,
                const std::vector<size_t> &widths,
                BLSResult<T> &result);
 template <typename T>
-void chisq_row(const T *__restrict__ wprod,
-               const T *__restrict__ wts,
+void chisq_row(const T *__restrict wprod,
+               const T *__restrict wts,
                const size_t size,
                const size_t min_width,
                const size_t max_width,
                BLSResult<T> &result);
 
 template <typename T>
-std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
-                                      const T *__restrict__ wts,
+std::vector<BLSResult<T>> periodogram(const T *__restrict mag,
+                                      const T *__restrict wts,
                                       size_t size,
                                       const BLSModel_FFA &model,
                                       bool verbose = true);

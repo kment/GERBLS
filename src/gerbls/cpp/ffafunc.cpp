@@ -23,10 +23,10 @@
 
 // out = x - y
 template <typename T>
-void array_diff(const T *__restrict__ x,
-                const T *__restrict__ y,
+void array_diff(const T *__restrict x,
+                const T *__restrict y,
                 const size_t size,
-                T *__restrict__ out)
+                T *__restrict out)
 {
     for (size_t i = 0; i < size; i++) out[i] = x[i] - y[i];
 }
@@ -35,8 +35,8 @@ void array_diff(const T *__restrict__ x,
 // Returns: BLSResult corresponding to dchi2_max
 // wtotal = sum(wts)
 template <typename T>
-void array_dchi2_max(const T *__restrict__ prod,
-                     const T *__restrict__ wts,
+void array_dchi2_max(const T *__restrict prod,
+                     const T *__restrict wts,
                      const size_t size,
                      const T wtotal,
                      BLSResult<T> &result,
@@ -94,8 +94,8 @@ void chisq_2d(riptide::ConstBlock<T> wprod,
 // Evaluate dchi2 for a fixed period (FFA row)
 // Output: BLSResult corresponding to the highest dchi2
 template <typename T>
-void chisq_row(const T *__restrict__ wprod,
-               const T *__restrict__ wts,
+void chisq_row(const T *__restrict wprod,
+               const T *__restrict wts,
                const size_t size,
                const std::vector<size_t> &widths,
                BLSResult<T> &result)
@@ -123,8 +123,8 @@ void chisq_row(const T *__restrict__ wprod,
 // Evaluate dchi2 for a fixed period (FFA row)
 // Output: BLSResult corresponding to the highest dchi2
 template <typename T>
-void chisq_row(const T *__restrict__ wprod,
-               const T *__restrict__ wts,
+void chisq_row(const T *__restrict wprod,
+               const T *__restrict wts,
                const size_t size,
                const size_t min_width,
                const size_t max_width,
@@ -148,8 +148,8 @@ void chisq_row(const T *__restrict__ wprod,
 // Compute the periodogram of a time series that has been normalised to zero mean and unit variance.
 // P Output: vector of BLSResult<T> containing the best fit for each tested orbital period
 template <typename T>
-std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
-                                      const T *__restrict__ wts,
+std::vector<BLSResult<T>> periodogram(const T *__restrict mag,
+                                      const T *__restrict wts,
                                       size_t size,
                                       const BLSModel_FFA &model,
                                       bool verbose)
@@ -327,9 +327,9 @@ std::vector<BLSResult<T>> periodogram(const T *__restrict__ mag,
 
 // Explicit instantiations for float and double
 template std::vector<BLSResult<float>> periodogram(
-    const float *__restrict__, const float *__restrict__, size_t, const BLSModel_FFA &, bool);
+    const float *__restrict, const float *__restrict, size_t, const BLSModel_FFA &, bool);
 template std::vector<BLSResult<double>> periodogram(
-    const double *__restrict__, const double *__restrict__, size_t, const BLSModel_FFA &, bool);
+    const double *__restrict, const double *__restrict, size_t, const BLSModel_FFA &, bool);
 
 /*
 Returns the total number of trial periods in a periodogram

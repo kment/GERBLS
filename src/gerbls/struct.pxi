@@ -149,7 +149,19 @@ cdef class pyDataContainer:
         return np.asarray(self.view_rjd())
     
     def running_median(self, double hwidth):
-        """:meta private:"""
+        """
+        Evaluate a running median filter on the data with a given half-width (half-window length).
+
+        Parameters
+        ----------
+        hwidth : float
+            Half-width (half-window length) of the running median filter.
+        
+        Returns
+        -------
+        numpy.ndarray
+            Array of running median values.
+        """
         return np.asarray(self.cPtr.running_median(hwidth))
     
     def running_median_eval(self, double hwidth, double[:] t_eval):

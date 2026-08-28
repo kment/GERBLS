@@ -39,7 +39,7 @@ void check_trial_widths(const size_t* widths, size_t num_widths, size_t bins)
 Compute the S/N of a single pulse profile. Trial widths must be > 0 and < cols. stdnoise must be > 0.
 output must have capacity for num_widths elements.
 */
-void snr1(const float* __restrict__ arr, size_t size, const size_t* widths, size_t num_widths, float stdnoise, float* __restrict__ out)
+void snr1(const float* __restrict arr, size_t size, const size_t* widths, size_t num_widths, float stdnoise, float* __restrict out)
     {
     const size_t wmax = *std::max_element(widths, widths + num_widths);
     float cpfsum[size + wmax];
@@ -60,7 +60,7 @@ void snr1(const float* __restrict__ arr, size_t size, const size_t* widths, size
     }
 
 
-void snr2(ConstBlock<float> block, const size_t* widths, size_t num_widths, float stdnoise, float* __restrict__ out)
+void snr2(ConstBlock<float> block, const size_t* widths, size_t num_widths, float stdnoise, float* __restrict out)
     {
     for (size_t i = 0; i < block.rows; ++i)
         {

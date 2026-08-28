@@ -8,5 +8,5 @@ from .core import *
 from .blsfunc import run_bls
 
 # Optional extras
-from .clean import clean_savgol
+from .clean import clean_savgol, find_flares
 from .trmodel import LDModel

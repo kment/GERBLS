@@ -8,6 +8,23 @@ inside `pyproject.toml` is still considered experimental and may be subject to c
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 import numpy as np
+import sys
+
+# Platform-specific compiler flags
+if sys.platform == "win32":
+    extra_compile_args = ["/O2",
+                          "/std:c++17",
+                          "/fp:fast"]
+else:
+    extra_compile_args = ["-O3",
+                          "-std=c++0x",
+                          "-march=native",
+                          "-fassociative-math",
+                          "-fno-math-errno",
+                          "-ffinite-math-only",
+                          "-fno-rounding-math",
+                          "-fno-signed-zeros",
+                          "-fno-trapping-math"]
 
 setup(name = "gerbls",
       ext_modules = cythonize([Extension("gerbls.core",
@@ -19,15 +36,7 @@ setup(name = "gerbls",
                                          include_dirs=[np.get_include()],
                                          define_macros=[("NPY_NO_DEPRECATED_API", 
                                                          "NPY_1_7_API_VERSION")],
-                                         extra_compile_args = ["-O3",
-                                                               "-std=c++0x",
-                                                               "-march=native",
-                                                               "-fassociative-math",
-                                                               "-fno-math-errno",
-                                                               "-ffinite-math-only",
-                                                               "-fno-rounding-math",
-                                                               "-fno-signed-zeros",
-                                                               "-fno-trapping-math"])], 
+                                         extra_compile_args = extra_compile_args)], 
                               annotate=False,
                               compiler_directives={"embedsignature": True}
                               ),

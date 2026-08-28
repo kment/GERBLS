@@ -17,6 +17,8 @@ def clean_savgol(phot: gerbls.pyDataContainer,
                  chunk_length: float = 0.,
                  verbose: bool = True):
     """
+    .. warning:: This function is deprecated and should not be used. Use a custom detrender instead.
+
     Clean the data using a Savitsky-Golay filter.
     Also performs sigma clipping and flare rejection.
     Cubic splines will be used to interpolate over any masked data.

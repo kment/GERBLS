@@ -1,3 +1,3 @@
-Detrending
+Data cleaning
 ==================
-.. autofunction:: gerbls.clean_savgol
+.. autofunction:: gerbls.find_flares

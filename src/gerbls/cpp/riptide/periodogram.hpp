@@ -120,18 +120,18 @@ Outputs are: trial periods (num_periods elements), number of phase bins used in 
 and signal to noise ratio (num_periods * num_widths elements)
 */
 void periodogram(
-    const float* __restrict__ data,
+    const float* __restrict data,
     size_t size,
     double tsamp,
-    const size_t* __restrict__ widths,
+    const size_t* __restrict widths,
     size_t num_widths,
     double period_min,
     double period_max,
     size_t bins_min,
     size_t bins_max,
-    double* __restrict__ periods,
-    uint32_t* __restrict__ foldbins,
-    float* __restrict__ snr)
+    double* __restrict periods,
+    uint32_t* __restrict foldbins,
+    float* __restrict snr)
     {
     periodogram_check_arguments(size, tsamp, period_min, period_max, bins_min, bins_max);
 

@@ -14,13 +14,19 @@ GERBLS can outperform popular brute-force BLS implementations such as
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Instructions
 
    install
    getting_started
    basic_usage
    full_usage
    examples/fastbls
-   api/index
+   benchmarks
 
-* :ref:`genindex`
+.. toctree::
+   :maxdepth: 2
+   :caption: About
+
+   api/index
+   changelog
+   genindex

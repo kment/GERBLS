@@ -48,7 +48,7 @@ double downsampled_variance(size_t num_samples, double f)
 Downsample input array by a real-valued factor. Output must have capacity for floor((size - 1.0) / f) elements
 */
 template <typename T>
-void downsample(const T* __restrict__ in, size_t size, double f, T* __restrict__ out)
+void downsample(const T* __restrict in, size_t size, double f, T* __restrict out)
     {
     check_downsampling_factor(size, f);
 

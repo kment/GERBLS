@@ -14,6 +14,7 @@ author = 'Kristo Ment'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'myst_parser',
     'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',

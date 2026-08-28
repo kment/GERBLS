@@ -157,7 +157,7 @@ class LDModel(TransitModel):
         params = self._get_batman_TransitParams()
         return batman.TransitModel(params, np.asarray(time)).light_curve(params)
 
-    def fit(self, phot: gerbls.pyDataContainer, u_fixed: bool = False) -> None:
+    def fit(self, phot: gerbls.pyDataContainer, u_fixed: bool = False, P_tol: float = 0.01) -> None:
         """
         Fit a limb-darkened model to the data.
         Currently stored parameter values are used as initial guesses for the solution.
@@ -170,6 +170,9 @@ class LDModel(TransitModel):
         u_fixed : bool, optional
             Whether to keep the limb darkening parameters fixed, by default False.
             If True, values for ``u1`` and/or ``u2`` must be set.
+        P_tol : float, optional
+            The fractional amount the fitted period is allowed to change, by default 0.01. Must be
+            greater than zero.
 
         Returns
         -------
@@ -188,6 +191,7 @@ class LDModel(TransitModel):
         if u_fixed and self.target.u1 == 0 and self.target.u2 == 0:
             raise ValueError(
                 "Quadratic limb-darkening coefficients cannot be zero if u_fixed is True.")
+        assert P_tol > 0, "P_tol must be greater than zero to avoid fitting errors."
 
         params = self._get_batman_TransitParams()
         model = batman.TransitModel(params, phot.rjd)
@@ -251,9 +255,14 @@ class LDModel(TransitModel):
         self.dchi2 = self.chi2_const - self.chi2
 
     @classmethod
-    def from_BLS(cls, bls: gerbls.pyBLSResult, target: Optional[gerbls.pyTarget] = None):
+    def from_BLS(cls,
+                 bls: gerbls.pyBLSResult,
+                 target: Optional[gerbls.pyTarget] = None,
+                 b_max: float = 0.7):
         """
         Set up a limb-darkened model from a BLS result.
+        ``target`` needs to be provided to estimate the impact parameter, otherwise it is 
+        initialized to 0.
 
         Parameters
         ----------
@@ -261,11 +270,14 @@ class LDModel(TransitModel):
             BLS result.
         target : Optional[gerbls.pyTarget], optional
             Data structure containing stellar parameters, by default None
+        b_max : float, optional
+            The largest value the impact parameter can be initialized to, by default 0.7.
+            Helps to avoid getting stuck near b = 1. No effect if target is None
 
         Returns
         -------
         gerbls.LDModel
         """
-        b = 0. if target is None else target.estimate_b(bls.P, bls.dur)
+        b = 0. if target is None else min(target.estimate_b(bls.P, bls.dur), b_max)
         r = (bls.dmag / bls.mag0)**0.5
         return cls(b=b, mag0=bls.mag0, P=bls.P, r=r, t0=bls.t0, target=target)

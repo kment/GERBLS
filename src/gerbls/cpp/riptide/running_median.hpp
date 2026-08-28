@@ -16,7 +16,7 @@ namespace riptide {
 
 
 template <typename T>
-size_t partition(T* __restrict__ data, size_t start, size_t end, size_t ipiv)
+size_t partition(T* __restrict data, size_t start, size_t end, size_t ipiv)
     {
     const T pivot = data[ipiv];
 
@@ -42,7 +42,7 @@ size_t partition(T* __restrict__ data, size_t start, size_t end, size_t ipiv)
 
 // Find the n-th element in data between indices start and end (inclusive)
 template <typename T>
-float nth_element(T* __restrict__ data, size_t start, size_t end, size_t n)
+float nth_element(T* __restrict data, size_t start, size_t end, size_t n)
     {
     if (start == end)
         return data[start];
@@ -103,7 +103,7 @@ public:
 
 
 template <typename T>
-void running_median(const T* __restrict__ data, size_t size, size_t width, T* __restrict__ out)
+void running_median(const T* __restrict data, size_t size, size_t width, T* __restrict out)
     {
     if (!(width % 2))
         throw std::invalid_argument("width must be an odd number");

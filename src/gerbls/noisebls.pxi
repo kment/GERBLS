@@ -135,6 +135,7 @@ cdef class pyNoiseBLS:
                         double bin_width,
                         str selection_mode = "",
                         double bin_width_prec = 0.1,
+                        double percentile = 95.,
                         bool_t verbose = True):
         """
         Generate the noise BLS spectrum.
@@ -143,7 +144,7 @@ cdef class pyNoiseBLS:
         ----------
         N_sim : int
             Number of simulations.
-        selection_mode : {'fit', 'max'}, optional
+        selection_mode : {'fit', 'max', 'percentile'}, optional
             Affects how the noise BLS value is calculated from simulated BLS spectra, by default
             'max'.
         verbose : bool, optional
@@ -210,6 +211,8 @@ cdef class pyNoiseBLS:
             elif selection_mode == 'fit':
                 chi2_param = np.exp(fit_chi2_dist(dchi2_T[i, :]).x)
                 self.cPtr.dchi2[i] = chi2.isf(1./N_freq, *chi2_param)
+            elif selection_mode == 'percentile':
+                self.cPtr.dchi2[i] = np.percentile(dchi2_T[i, :], percentile)
 
     @property
     def N_freq(self):

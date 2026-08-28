@@ -15,7 +15,7 @@ namespace riptide {
 
 /* Add x with y, and store the result in z */
 template <typename T>
-void add(const T* __restrict__ x, const T* __restrict__ y, size_t size, T* __restrict__ z)
+void add(const T* __restrict x, const T* __restrict y, size_t size, T* __restrict z)
     {
     for (size_t i = 0; i < size; ++i)
         z[i] = x[i] + y[i];
@@ -26,7 +26,7 @@ Add x with y rolled by shift elements to the LEFT, and store the result in z. sh
 In numpy that would equivalent to: z = x + roll(y, -shift)
 */
 template <typename T>
-void fused_rollback_add(const T* __restrict__ x, const T* __restrict__ y, size_t size, size_t shift, T* __restrict__ z)
+void fused_rollback_add(const T* __restrict x, const T* __restrict y, size_t size, size_t shift, T* __restrict z)
     {
     const size_t p = shift % size;
     const size_t q = size - p;
@@ -39,7 +39,7 @@ void fused_rollback_add(const T* __restrict__ x, const T* __restrict__ y, size_t
 Rotate x backwards by shift elements and stored the result in out. shift must be positive.
 In numpy that would equivalent to: out = roll(x, -shift)
 */
-void rollback(const float* __restrict__ x, size_t size, size_t shift, float* __restrict__ out)
+void rollback(const float* __restrict x, size_t size, size_t shift, float* __restrict out)
     {
     const size_t p = shift % size;
     const size_t q = size - p;
@@ -50,7 +50,7 @@ void rollback(const float* __restrict__ x, size_t size, size_t shift, float* __r
 
 // out = x + a
 template <typename T>
-void add_scalar(const T* __restrict__ x, size_t size, const T a, T* __restrict__ out)
+void add_scalar(const T* __restrict x, size_t size, const T a, T* __restrict out)
     {
     for (size_t i = 0; i < size; ++i)
         out[i] = x[i] + a;
@@ -58,7 +58,7 @@ void add_scalar(const T* __restrict__ x, size_t size, const T a, T* __restrict__
 
 
 // max(x[i] - y[i])
-float diff_max(const float* __restrict__ x, const float* __restrict__ y, size_t size)
+float diff_max(const float* __restrict x, const float* __restrict y, size_t size)
     {
     float dmax = x[0] - y[0];
     for (size_t i = 1; i < size; ++i)
@@ -83,7 +83,7 @@ out[size+1] = x[0] + x[1] + ... + x[size-1] + x[0] + x[1]
 ...
 */
 template <typename T>
-void circular_prefix_sum(const T* __restrict__ x, size_t size, size_t nsum, T* __restrict__ out)
+void circular_prefix_sum(const T* __restrict x, size_t size, size_t nsum, T* __restrict out)
     {
     // IMPORTANT: use a double precision accumulator
     double acc = 0;
